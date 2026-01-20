@@ -1630,32 +1630,37 @@ function setupEventListeners() {
     state.meses.forEach(m=> m.gastos = []);
     const startIdxForCuotas = selectedMonthIdx();
 
-    tempGastos.forEach(g=>{
-        if(g.cuotas && g.cuotas>1){
-        const numCuotas = Math.min(12, g.cuotas);
-        const montos = distribuirCuotas(g.valorTotal, numCuotas);
-        
-        for(let k=0;k<numCuotas;k++){
-            const idxMes = startIdxForCuotas + k; 
-            if(idxMes >= state.meses.length) break;
-            state.meses[idxMes].gastos.push({
-            desc: g.desc, 
-            tipo: g.tipo, 
-            valor: montos[k], 
-            pagado: false, 
-            cuotaIdx: k+1, 
-            cuotasTotal: numCuotas
-            });
-        }
-        }else{
-        state.meses.forEach(m=> m.gastos.push({
-            desc: g.desc, 
-            tipo: g.tipo, 
-            valor: g.valorTotal, 
-            pagado: false
-        }));
-        }
-    });
+ 
+tempGastos.forEach(g => {
+  if (g.cuotas && g.cuotas > 1) {
+    const numCuotas = Math.min(12, g.cuotas);
+
+    // ✅ Interpretar g.valorTotal como VALOR DE LA CUOTA (no dividir)
+    for (let k = 0; k < numCuotas; k++) {
+      const idxMes = startIdxForCuotas + k;
+      if (idxMes >= state.meses.length) break; // no exceder 12 meses
+
+      state.meses[idxMes].gastos.push({
+        desc: g.desc,
+        tipo: g.tipo,
+        valor: g.valorTotal,   // ← misma cuota cada mes
+        pagado: false,
+        cuotaIdx: k + 1,
+        cuotasTotal: numCuotas
+      });
+    }
+  } else {
+    // ⚠️ Se mantiene tu comportamiento actual: replica el gasto SIN cuotas a TODOS los meses.
+    state.meses.forEach(m => m.gastos.push({
+      desc: g.desc,
+      tipo: g.tipo,
+      valor: g.valorTotal,
+      pagado: false
+    }));
+  }
+});
+``
+
 
     if(tempInversiones.length>0){
         const m0 = state.meses[0];
