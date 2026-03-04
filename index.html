@@ -518,5 +518,237 @@
 
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
   <script src="app.js"></script>
+    <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-section">
+        <div class="footer-logo">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 12c0-4.418 3.582-8 8-8a8 8 0 010 16c-4.418 0-8-3.582-8-8z" stroke="#4fc3f7" stroke-width="2"/>
+            <path d="M8 12a4 4 0 018 0" stroke="#22c55e" stroke-width="2"/>
+          </svg>
+          <span>Programador de Gastos</span>
+        </div>
+        <p class="footer-description">Tu aliado financiero personal. Controla tus ingresos, gastos, ahorros e inversiones en un solo lugar.</p>
+      </div>
+
+      <div class="footer-section">
+        <h4>Enlaces rápidos</h4>
+        <ul class="footer-links">
+          <li><a href="#" onclick="setTab('entrada'); return false;">Ingresos y Gastos</a></li>
+          <li><a href="#" onclick="setTab('resumen'); return false;">Resumen</a></li>
+          <li><a href="#" onclick="setTab('ahorros'); return false;">Plan de Ahorros</a></li>
+          <li><a href="#" onclick="setTab('inversiones'); return false;">Inversiones</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h4>Acerca de</h4>
+        <ul class="footer-links">
+          <li><a href="#" onclick="showAboutModal(); return false;">Sobre la app</a></li>
+          <li><a href="#" onclick="showPrivacyModal(); return false;">Privacidad</a></li>
+          <li><a href="#" onclick="showTermsModal(); return false;">Términos de uso</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h4>Versión</h4>
+        <div class="footer-version">
+          <span class="version-badge">v2.0.0</span>
+          <span class="version-date">Marzo 2026</span>
+        </div>
+        <div class="footer-social">
+          <a href="#" class="social-link" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.03-2.682-.103-.253-.447-1.27.098-2.646 0 0 .84-.269 2.75 1.025.8-.223 1.65-.334 2.5-.334.85 0 1.7.111 2.5.334 1.91-1.294 2.75-1.025 2.75-1.025.545 1.376.201 2.393.099 2.646.64.698 1.03 1.591 1.03 2.682 0 3.841-2.337 4.687-4.565 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+            </svg>
+          </a>
+          <a href="#" class="social-link" aria-label="Twitter">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98-3.56-.18-6.73-1.89-8.84-4.48-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <p>&copy; 2026 Programador de Gastos. Todos los derechos reservados.</p>
+      <p>Hecho con <span class="heart">❤️</span> para tu libertad financiera</p>
+    </div>
+  </footer>
+
+  <!-- MODALES -->
+  <!-- Modal: Acerca de -->
+  <div id="aboutModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#4fc3f7" stroke-width="2"/>
+          <path d="M12 8v5M12 16h0" stroke="#4fc3f7" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="modal-title">Acerca de Programador de Gastos</div>
+        <button class="modal-close" onclick="hideModal('aboutModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="about-content">
+          <div class="about-section">
+            <h4>¿Qué es Programador de Gastos?</h4>
+            <p>Es una aplicación de finanzas personales diseñada para ayudarte a tomar el control total de tu dinero. Con ella puedes:</p>
+            <ul>
+              <li>📊 Registrar y categorizar ingresos y gastos</li>
+              <li>📈 Visualizar tu liquidez y hábitos de consumo</li>
+              <li>💰 Planificar ahorros mensuales con metas visuales</li>
+              <li>📉 Gestionar inversiones y calcular rendimientos</li>
+              <li>🎯 Proyectar tu futuro financiero a 12 meses</li>
+            </ul>
+          </div>
+          
+          <div class="about-section">
+            <h4>Características principales</h4>
+            <div class="features-grid">
+              <div class="feature">
+                <span class="feature-icon">🔒</span>
+                <span>Datos locales (no se comparten)</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon">📱</span>
+                <span>Diseño responsive</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon">🎨</span>
+                <span>Gráficos interactivos</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon">⚡</span>
+                <span>Soporte para cuotas</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon">💹</span>
+                <span>Cálculo de inversiones</span>
+              </div>
+              <div class="feature">
+                <span class="feature-icon">🏦</span>
+                <span>Alcancía visual</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-section">
+            <h4>Tecnologías utilizadas</h4>
+            <div class="tech-tags">
+              <span class="tech-tag">HTML5</span>
+              <span class="tech-tag">CSS3</span>
+              <span class="tech-tag">JavaScript (ES6+)</span>
+              <span class="tech-tag">SVG</span>
+              <span class="tech-tag">LocalStorage</span>
+            </div>
+          </div>
+
+          <div class="about-section">
+            <h4>Desarrollado por</h4>
+            <p><strong>Tu Nombre</strong> — Desarrollador Full Stack</p>
+            <p class="muted">Versión 2.0.0 · Marzo 2026</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" onclick="hideModal('aboutModal')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Privacidad -->
+  <div id="privacyModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="2" stroke="#22c55e" stroke-width="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4" stroke="#22c55e" stroke-width="2"/>
+        </svg>
+        <div class="modal-title">Política de Privacidad</div>
+        <button class="modal-close" onclick="hideModal('privacyModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="privacy-content">
+          <p><strong>Última actualización:</strong> Marzo 2026</p>
+          
+          <h4>1. Información que recopilamos</h4>
+          <p>Programador de Gastos NO recopila información personal. Todos tus datos financieros se almacenan exclusivamente en tu navegador mediante LocalStorage. No se envían a ningún servidor.</p>
+          
+          <h4>2. Uso de la información</h4>
+          <p>La aplicación funciona completamente offline. Los datos que ingresas (ingresos, gastos, inversiones) permanecen en tu dispositivo y solo tú tienes acceso a ellos.</p>
+          
+          <h4>3. Cookies y tecnologías similares</h4>
+          <p>No utilizamos cookies de rastreo. La única cookie técnica (si existe) es la necesaria para recordar tus preferencias de tema, pero no almacena información personal.</p>
+          
+          <h4>4. Seguridad</h4>
+          <p>Al ser una aplicación 100% frontend y sin backend, la seguridad de tus datos depende de la seguridad de tu propio dispositivo y navegador. Recomendamos no usar la aplicación en dispositivos compartidos.</p>
+          
+          <h4>5. Cambios a esta política</h4>
+          <p>Podemos actualizar esta política ocasionalmente. Te notificaremos mediante un aviso en la aplicación.</p>
+          
+          <div class="privacy-note">
+            <svg class="icon" viewBox="0 0 24 24" fill="none">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#f59e0b" stroke-width="2"/>
+            </svg>
+            <span>Tus datos son <strong>tuyos</strong>. No los vendemos, compartimos ni explotamos de ninguna forma.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" onclick="hideModal('privacyModal')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Términos de uso -->
+  <div id="termsModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <svg class="icon" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v16H4V4z" stroke="#f59e0b" stroke-width="2"/>
+          <path d="M8 8h8M8 12h8M8 16h4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="modal-title">Términos de Uso</div>
+        <button class="modal-close" onclick="hideModal('termsModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="terms-content">
+          <h4>1. Aceptación de los términos</h4>
+          <p>Al utilizar Programador de Gastos, aceptas cumplir con estos términos. Si no estás de acuerdo, por favor no uses la aplicación.</p>
+          
+          <h4>2. Uso permitido</h4>
+          <p>Puedes usar esta aplicación para:</p>
+          <ul>
+            <li>✅ Gestionar tus finanzas personales</li>
+            <li>✅ Crear presupuestos y planes de ahorro</li>
+            <li>✅ Realizar proyecciones financieras personales</li>
+          </ul>
+          <p>No está permitido:</p>
+          <ul>
+            <li>❌ Usar la aplicación con fines comerciales sin autorización</li>
+            <li>❌ Intentar extraer, replicar o distribuir el código sin permiso</li>
+            <li>❌ Usar la aplicación para almacenar información ilegal</li>
+          </ul>
+          
+          <h4>3. Precisión de la información</h4>
+          <p>Los cálculos financieros son aproximados y no constituyen asesoría financiera profesional. Siempre consulta con un experto para decisiones importantes.</p>
+          
+          <h4>4. Disponibilidad</h4>
+          <p>La aplicación se proporciona "tal cual". No garantizamos disponibilidad 24/7 ni ausencia de errores. Nos reservamos el derecho de modificar o discontinuar el servicio.</p>
+          
+          <h4>5. Responsabilidad</h4>
+          <p>No nos hacemos responsables por pérdidas financieras derivadas del uso de esta aplicación. Eres el único responsable de tus decisiones financieras.</p>
+          
+          <h4>6. Contacto</h4>
+          <p>Para preguntas sobre estos términos: <a href="#" onclick="return false;">soporte@programadorgastos.app</a></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" onclick="hideModal('termsModal')">Cerrar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

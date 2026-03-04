@@ -1948,7 +1948,54 @@ function renderInvTop5Chart(){
     requestAnimationFrame(step);
     });
 }
+/* ==== FUNCIONES PARA MODALES ==== */
+function showModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'flex';
+    // Prevenir scroll del body
+    document.body.style.overflow = 'hidden';
+  }
+}
 
+function hideModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'none';
+    // Restaurar scroll
+    document.body.style.overflow = '';
+  }
+}
+
+function showAboutModal() {
+  showModal('aboutModal');
+}
+
+function showPrivacyModal() {
+  showModal('privacyModal');
+}
+
+function showTermsModal() {
+  showModal('termsModal');
+}
+
+// Cerrar modal al hacer clic fuera del contenido
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('modal-overlay')) {
+    e.target.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+});
+
+// Cerrar modal con tecla ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay[style*="display: flex"]').forEach(modal => {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    });
+  }
+});
 /* ==== INICIALIZACIÓN ==== */
 function init(){
     refreshIngresoCats(); 
@@ -2008,6 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 
 
