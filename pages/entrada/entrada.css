@@ -5,11 +5,6 @@
 .resumen-mes { grid-area: resumen; }
 .gastos { grid-area: gastos; }
 
-.bar { height: 10px; border-radius: 8px; background: var(--bar-track); border: 1px solid var(--bar-outline); overflow: hidden; }
-.bar .fill { height: 100%; transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.fill.liq { background: linear-gradient(90deg, var(--bar-fill-blue), var(--bar-fill-strong)); }
-.fill.exp { background: linear-gradient(270deg, var(--bar-fill-amber), var(--bar-fill-red)); }
-
 .alert {
   display: flex;
   align-items: center;

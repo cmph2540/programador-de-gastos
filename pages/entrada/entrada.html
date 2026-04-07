@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="icon" href="../../assets/images/hero-logo.png" />
   <link rel="stylesheet" href="../../global.css" />
-  <link rel="stylesheet" href="./admin.css" />
-  <title>Programador de Gastos | Panel Admin</title>
+  <link rel="stylesheet" href="./entrada.css" />
+  <title>Programador de Gastos | Ingresos y Gastos</title>
 </head>
-<body data-page="admin">
+<body data-page="entrada">
   <header>
     <div class="logo">
       <svg viewBox="0 0 24 24" fill="none"><path d="M4 12c0-4.418 3.582-8 8-8a8 8 0 010 16c-4.418 0-8-3.582-8-8z" stroke="#4fc3f7" stroke-width="2"/><path d="M8 12a4 4 0 018 0" stroke="#22c55e" stroke-width="2"/></svg>
@@ -22,11 +22,11 @@
     </button>
 
     <nav id="mainNav">
-      <a class="tab" data-tab="entrada" href="../../index.html">Ingresos y Gastos</a>
+      <a class="tab active" data-tab="entrada" href="./entrada.html">Ingresos y Gastos</a>
       <a class="tab" data-tab="resumen" href="../resumen/resumen.html">Resumen</a>
       <a class="tab" data-tab="ahorros" href="../ahorros/ahorros.html">Plan de Ahorros</a>
       <a class="tab" data-tab="inversiones" href="../inversiones/inversiones.html">Inversiones</a>
-      <a class="tab admin-tab active" data-tab="admin" id="adminTab" href="./admin.html" style="display:none;">Panel Admin</a>
+      <a class="tab admin-tab" data-tab="admin" id="adminTab" href="../admin/admin.html" style="display:none;">Panel Admin</a>
       
       <div id="userInfo" class="user-info" style="display:none;">
         <span id="userName" class="user-name"></span>
@@ -50,37 +50,233 @@
       <span id="tipText"></span>
     </div>
     <br>
-
-    <!-- Panel Admin -->
-    <section id="admin" class="card" role="region" aria-label="Panel de Administración">
-      <h3>Panel de Administración</h3>
-      
-      <div class="admin-stats">
-        <div class="admin-stat-card">
-          <div class="admin-stat-value" id="adminTotalUsers">0</div>
-          <div class="admin-stat-label">Usuarios registrados</div>
+    
+    <!-- ENTRADA -->
+    <section id="entrada" class="entrada-grid" role="region" aria-label="Entrada de ingresos y gastos">
+      <!-- INGRESOS -->
+      <div class="card ingresos">
+        <h3>Ingresos</h3>
+        <div class="row">
+          <div class="field">
+            <label>Categoría</label>
+            <select id="ingresoCategoria"></select>
+            <div id="ingresoCreateBox" class="inline-create" aria-expanded="false">
+              <input id="ingresoNewConcept" class="input" type="text" placeholder="Nuevo concepto de ingreso" />
+              <button id="btnIngresoAddConcept" class="btn primary">Agregar</button>
+              <button id="btnIngresoCancelConcept" class="btn ghost">Cancelar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Valor (COP)</label>
+            <input id="ingresoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+          <div class="field" style="align-self:flex-end;">
+            <button id="btnAddIngreso" class="btn primary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4fc3f7" stroke-width="2" stroke-linecap="round"/></svg>
+              Agregar ingreso
+            </button>
+          </div>
         </div>
-        <div class="admin-stat-card">
-          <div class="admin-stat-value" id="adminActiveSessions">0</div>
-          <div class="admin-stat-label">Sesiones activas</div>
+
+        <div class="table-wrap">
+          <table id="tablaIngresos">
+            <thead><tr><th>Concepto</th><th class="right">Valor</th><th class="right">Acciones</th></tr></thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr><th>Total Ingresos</th><th class="right" id="totalIngresos">COP 0</th><th></th></tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table id="tablaAdminUsers">
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Registro</th>
-              <th>Último acceso</th>
-              <th>Método</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <!-- RESUMEN -->
+      <div class="card compacto resumen-mes">
+        <h3>Resumen del mes</h3>
+        <div class="row">
+          <div class="field">
+            <label>Saldo = Ingresos – Gastos</label>
+            <div id="saldoChip" class="chip ok">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#22c55e" stroke-width="2"/></svg>
+              <span id="saldoTexto">COP 0</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Liquidez = Dinero / Total ingresos</label>
+            <div class="bar"><div id="liqFill" class="fill liq" style="width:0%"></div></div>
+            <div class="muted" id="liqTexto">0%</div>
+          </div>
+          <div class="field">
+            <label>Gastos (%) = 100% – Liquidez</label>
+            <div class="bar"><div id="expFill" class="fill exp" style="width:0%"></div></div>
+            <div class="muted" id="expTexto">0%</div>
+          </div>
+        </div>
+
+        <div id="alertaLiquidez" class="alert" style="display:none;">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 8v6M12 18h0" stroke="#f59e0b" stroke-width="2"/></svg>
+          <span id="alertaLiquidezTexto">Advertencia de liquidez…</span>
+        </div>
+
+        <div class="row" style="margin-top:.45rem;">
+          <div class="field">
+            <button id="btnGuardarMes" class="btn secondary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#4fc3f7" stroke-width="2"/></svg>
+              Guardar solo este mes
+            </button>
+          </div>
+          <div class="field">
+            <button id="btnGuardar" class="btn success">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#22c55e" stroke-width="2"/></svg>
+              Guardar y crear 12 meses
+            </button>
+          </div>
+
+          <div class="field" style="align-self:flex-end">
+            <button id="btnEditarMes" class="btn secondary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10-10-4-4L4 16v4z" stroke="#4fc3f7" stroke-width="2"/></svg>
+              Editar mes
+            </button>
+          </div>
+          <div class="field">
+            <label>Selecciona mes a editar</label>
+            <select id="mesSelector" disabled></select>
+          </div>
+          <div class="field edit-info" id="mesEditInfo">
+            <label>Mes en edición</label>
+            <div id="mesEditChip" class="chip edit">Editando: —</div>
+          </div>
+
+          <div class="field" id="primaField" style="display:none">
+            <label>
+              <input type="checkbox" id="chkPrima" />
+              Prima (50% del salario) — Junio y Diciembre
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- GASTOS -->
+      <div class="card gastos">
+        <h3>Gastos</h3>
+        
+        <div id="gastosAuthWarning" class="auth-warning" style="display:none;">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 9v2m0 4h0m9-4a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#f59e0b" stroke-width="2"/></svg>
+          <span>Inicia sesión para agregar gastos</span>
+        </div>
+
+        <div class="donut-header">
+          <div class="donut-box">
+            <div id="singleDataContainer" class="single-data-display" style="display:none;">
+              <div id="singleDataValue" class="single-data-value">0%</div>
+              <div id="singleDataLabel" class="single-data-label">Pagado</div>
+            </div>
+            <svg class="donut" id="donutPaidSvg" viewBox="0 0 140 140" aria-label="Progreso de pagos">
+              <circle cx="70" cy="70" r="60" stroke="#1c2940" stroke-width="16" fill="none"/>
+              <circle id="donutPaid" cx="70" cy="70" r="60" stroke="#22c55e" stroke-width="16" fill="none"
+                      stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377"
+                      transform="rotate(-90 70 70)"/>
+              <circle cx="70" cy="70" r="38" fill="#0b1323" stroke="#16233f" stroke-width="1"/>
+              <text id="donutCenterPct" x="70" y="70" text-anchor="middle" dominant-baseline="middle"
+                    font-size="16" font-weight="700" fill="#eaf1f9">0%</text>
+            </svg>
+            <div class="donut-labels">
+              <div id="donutPct" class="chip ok">0% pagado</div>
+              <div class="legend"><span class="box" style="background:#22c55e"></span><span>Pagado</span></div>
+              <div class="legend"><span class="box" style="background:#4fc3f7"></span><span>Pendiente</span></div>
+              <div class="muted" id="donutAmounts">COP 0 / COP 0</div>
+            </div>
+          </div>
+
+          <div class="donut-box">
+            <div id="singleCatDataContainer" class="single-data-display" style="display:none;">
+              <div id="singleCatDataValue" class="single-data-value">100%</div>
+              <div id="singleCatDataLabel" class="single-data-label">Categoría</div>
+            </div>
+            <svg class="donut" id="catDonutSvg" viewBox="0 0 140 140" aria-label="Distribución por tipo">
+              <g id="catDonutSegs" transform="rotate(-90 70 70)"></g>
+              <circle cx="70" cy="70" r="38" fill="#0b1323" stroke="#16233f" stroke-width="1"/>
+              <text id="catDonutCenter" x="70" y="70" text-anchor="middle" dominant-baseline="middle"
+                    font-size="13" font-weight="700" fill="#eaf1f9">Por tipo</text>
+            </svg>
+            <div class="donut-labels">
+              <div class="legend">
+                <div class="legend-columns">
+                  <div id="catLegendCol1" class="legend-col"></div>
+                  <div id="catLegendCol2" class="legend-col"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Descripción (máx. 30)</label>
+            <input id="gastoDesc" class="input" type="text" maxlength="30" placeholder="Ej. Celular / Mercado / SOAT…" />
+          </div>
+          <div class="field">
+            <label>Tipo de gasto</label>
+            <select id="gastoTipo"></select>
+            <div id="gastoTipoCreateBox" class="inline-create" aria-expanded="false">
+              <input id="gastoNewTipo" class="input" type="text" placeholder="Nuevo tipo de gasto" />
+              <button id="btnGastoAddTipo" class="btn primary">Agregar</button>
+              <button id="btnGastoCancelTipo" class="btn ghost">Cancelar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Valor total (COP)</label>
+            <input id="gastoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+          <div class="field">
+            <label><input type="checkbox" id="chkGastoCuotas" /> ¿Gasto en cuotas?</label>
+            <input id="gastoCuotas" class="input" type="number" min="2" step="1" placeholder="N° de cuotas" disabled />
+          </div>
+          <div class="field" style="align-self:flex-end;">
+            <button id="btnAddGasto" class="btn primary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4fc3f7" stroke-width="2" stroke-linecap="round"/></svg>
+              Agregar gasto
+            </button>
+          </div>
+        </div>
+
+        <!-- Gastos Hormiga Section -->
+        <div class="hormiga-section">
+          <div class="hormiga-header" 
+               onmouseenter="showHormigaTooltip()" 
+               onmouseleave="hideHormigaTooltip()">
+            <div class="hormiga-title">
+              <span class="hormiga-icon">🐜</span>
+              <strong>Gastos Hormiga</strong>
+              <span class="hormiga-total" id="hormigaTotalPreview">COP 0</span>
+            </div>
+            <button class="btn small primary" onclick="openHormigaModal()">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4fc3f7" stroke-width="2"/></svg>
+              Gestionar
+            </button>
+          </div>
+          <div id="hormigaTooltip" class="hormiga-tooltip">
+            <div id="hormigaTooltipContent" class="hormiga-tooltip-content"></div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tablaGastos">
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th class="right">Valor</th>
+                <th class="right">% del total</th>
+                <th class="right">Pagado</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr><th>Total Gastos</th><th></th><th class="right" id="totalGastos">COP 0</th><th></th><th></th><th></th></tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </section>
   </div>
@@ -258,6 +454,48 @@
     </div>
   </div>
 
+  <!-- MODAL DE GASTOS HORMIGA -->
+  <div id="hormigaModal" class="modal-overlay">
+    <div class="modal-content modal-hormiga">
+      <div class="modal-header">
+        <span class="hormiga-icon-large">🐜</span>
+        <div class="modal-title">Gastos Hormiga</div>
+        <button class="modal-close" onclick="closeHormigaModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Registra esos pequeños gastos diarios que suman mucho.</p>
+        
+        <div class="hormiga-stats">
+          <span>Total acumulado:</span>
+          <strong id="hormigaTotalDisplay">COP 0</strong>
+        </div>
+
+        <div id="hormigaListContainer" class="hormiga-list-container"></div>
+
+        <div id="hormigaFormContainer" class="hormiga-form-container" style="display:none;">
+          <h4 id="hormigaFormTitle">Nuevo Gasto Hormiga</h4>
+          <input type="hidden" id="hormigaEditIndex" value="-1">
+          <div class="hormiga-form-row">
+            <input id="hormigaConcepto" class="input" type="text" placeholder="Concepto (ej. Café, Transporte)" />
+          </div>
+          <div class="hormiga-form-row">
+            <input id="hormigaValor" class="input currency-input" type="text" placeholder="Valor (COP)" />
+          </div>
+          <div class="hormiga-form-row">
+            <input id="hormigaFecha" class="input" type="date" />
+          </div>
+          <div class="hormiga-form-actions">
+            <button class="btn secondary" onclick="cancelHormigaForm()">Cancelar</button>
+            <button class="btn success" onclick="saveGastoHormiga()">Guardar</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn primary" onclick="showAddHormigaForm()">+ Agregar gasto</button>
+        <button class="btn secondary" onclick="closeHormigaModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL DE RESET -->
   <div id="resetModal" class="modal-overlay">
@@ -304,7 +542,7 @@
       <div class="footer-section">
         <h4>Enlaces rápidos</h4>
         <ul class="footer-links">
-          <li><a href="../../index.html">Ingresos y Gastos</a></li>
+          <li><a href="./entrada.html">Ingresos y Gastos</a></li>
           <li><a href="../resumen/resumen.html">Resumen</a></li>
           <li><a href="../ahorros/ahorros.html">Plan de Ahorros</a></li>
           <li><a href="../inversiones/inversiones.html">Inversiones</a></li>
@@ -471,7 +709,7 @@
     </div>
   </div>
   
-  <script src="./admin.js"></script>
+  <script src="./entrada.js"></script>
   <script src="../../app.js"></script>
 </body>
 </html>

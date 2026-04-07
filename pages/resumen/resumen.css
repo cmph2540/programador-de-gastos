@@ -1,10 +1,5 @@
 /* Estilos exclusivos de la pagina de resumen. */
 
-.bar { height: 10px; border-radius: 8px; background: var(--bar-track); border: 1px solid var(--bar-outline); overflow: hidden; }
-.bar .fill { height: 100%; }
-.fill.liq { background: linear-gradient(90deg, var(--bar-fill-blue), var(--bar-fill-strong)); }
-.fill.exp { background: linear-gradient(270deg, var(--bar-fill-amber), var(--bar-fill-red)); }
-
 @media (max-width: 768px) {
   #tablaResumen th, #tablaResumen td { padding: 0.4rem; font-size: 0.8rem; }
 }
