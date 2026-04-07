@@ -1,0 +1,25 @@
+/* Estilos exclusivos de la pagina de inversiones. */
+
+.inv-header { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-top: -.2rem; margin-bottom: .7rem; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(180deg, #0c172a, #0b1425); flex-wrap: wrap; }
+.inv-available-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .5rem; border-radius: 999px; font-weight: 700; font-size: .86rem; border: 1px solid #2e7d61; color: #90efc0; background-color: rgba(34,197,94,.12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.inv-advices { margin: .2rem 0 .7rem 0; padding: .5rem .7rem; border: 1px dashed #224068; border-radius: 12px; background: linear-gradient(180deg, #0c172a, #0b1425); color: #bcd2ea; }
+.advice-text { margin-top: 0.3rem; font-style: italic; transition: opacity 0.3s ease; }
+.chart-wrap { display: flex; flex-direction: column; gap: .6rem; }
+.chart-card { border: 1px solid var(--border); border-radius: 12px; padding: .7rem; background: linear-gradient(180deg,#0c172a,#0b1425); }
+.chart-title { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.chart-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .5rem; border-radius: 999px; background-color: rgba(34,197,94,.12); border: 1px solid #2e7d61; color: #90efc0; font-weight: 700; font-size: .86rem; }
+.inv-chart { width: 100%; max-width: var(--chart-max-width); height: auto; display: block; margin: 0 auto; }
+.subtitle { font-size: .82rem; color: #9fb3c8; }
+
+#tablaInv th:nth-child(1), #tablaInv td:nth-child(1) { width: 200px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tablaInv th:nth-child(2), #tablaInv td:nth-child(2) { width: 110px; }
+#tablaInv th:nth-child(3), #tablaInv td:nth-child(3) { width: 130px; }
+#tablaInv th:nth-child(4), #tablaInv td:nth-child(4) { width: 140px; }
+#tablaInv th:nth-child(5), #tablaInv td:nth-child(5) { width: 130px; }
+#tablaInv th:nth-child(6), #tablaInv td:nth-child(6) { width: 115px; }
+#tablaInv th:nth-child(7), #tablaInv td:nth-child(7) { width: 160px; }
+#tablaInv th:nth-child(8), #tablaInv td:nth-child(8) { width: 110px; }
+#tablaInv th:nth-child(9), #tablaInv td:nth-child(9) { width: 110px; }
+#tablaInv th:nth-child(10), #tablaInv td:nth-child(10) { width: 110px; }
+#tablaInv th:nth-child(11), #tablaInv td:nth-child(11) { width: 100px; }
+#tablaInv th:nth-child(12), #tablaInv td:nth-child(12) { width: 110px; }

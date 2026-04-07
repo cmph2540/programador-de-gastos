@@ -1,0 +1,36 @@
+/* Estilos exclusivos de la pagina de ahorros. */
+
+.bank-wrap { display: flex; align-items: center; gap: .8rem; margin-bottom: .65rem; padding: .55rem .75rem; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(180deg, #0c172a, #0b1425); flex-wrap: wrap; }
+.bank { width: var(--bank-width); height: var(--bank-height); transition: transform 300ms ease; }
+.bank-labels { display: flex; flex-direction: column; gap: .3rem; }
+.bank-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .5rem; border-radius: 999px; font-weight: 700; font-size: .86rem; border: 1px solid #2e7d61; color: #90efc0; background-color: rgba(34,197,94,.12); }
+.confirm-ahorro-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.confirm-ahorro-label { font-size: 0.85rem; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+.confirm-ahorro-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+.col-ahorro-confirmado { position: relative; }
+.col-ahorro-confirmado.confirmado::before { content: "✓"; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: bold; }
+
+@keyframes bankCelebrate {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.03) rotate(0.5deg); }
+  40% { transform: scale(1.03) rotate(-0.5deg); }
+  60% { transform: scale(1.03) rotate(0.4deg); }
+  80% { transform: scale(1.02) rotate(-0.4deg); }
+  100% { transform: scale(1); }
+}
+
+.bank.celebrate { animation: bankCelebrate 900ms ease; }
+
+@media (max-width: 768px) {
+  .plan-ahorro-mobile { display: flex; flex-direction: column; }
+  .bank-wrap { flex-direction: column; align-items: stretch; }
+  #tablaAhorros { font-size: 0.8rem; }
+  #tablaAhorros th, #tablaAhorros td { padding: 0.4rem 0.3rem; white-space: nowrap; }
+  .mobile-collapse-label::after {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+}
