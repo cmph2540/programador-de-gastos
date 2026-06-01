@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="icon" href="../../assets/images/hero-logo.png" />
+  <link rel="stylesheet" href="../../global.css" />
+  <link rel="stylesheet" href="./login.css" />
+  <title>Programador de Gastos | Iniciar Sesión</title>
+</head>
+<body data-page="login">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 12c0-4.418 3.582-8 8-8a8 8 0 010 16c-4.418 0-8-3.582-8-8z" stroke="#4fc3f7" stroke-width="2"/><path d="M8 12a4 4 0 018 0" stroke="#22c55e" stroke-width="2"/></svg>
+      Programador de Gastos
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tip">
+      <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 2v3M5.2 7.2l2.1 2.1M2 12h3M7.2 18.8l2.1-2.1M12 19v3M18.8 16.8l-2.1-2.1M19 12h3M16.8 7.2l-2.1 2.1" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>
+      <span id="tipText">Inicia sesión para gestionar tus finanzas personales.</span>
+    </div>
+    <br>
+  </div>
+
+<!-- MODAL DE LOGIN -->
+<div id="loginModal" class="modal-overlay" style="display:flex;">
+    <div class="modal-content modal-login">
+        <div class="modal-header">
+            <svg class="icon" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#4fc3f7" stroke-width="2"/>
+                <path d="M12 8v5M12 16h0" stroke="#4fc3f7" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div class="modal-title">Iniciar Sesión</div>
+        </div>
+        <div class="modal-body">
+            <p>Inicia sesión para registrar y gestionar tus finanzas.</p>
+            <div class="login-email-input">
+                <input type="email" id="loginEmail" class="input" placeholder="tu@email.com" />
+            </div>
+            <button class="btn google-login-btn" onclick="loginWithGoogle()">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Continuar con Google
+            </button>
+            <p class="login-note">Tus datos se almacenan localmente. Sesión válida por 15 días.</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE PERFIL DE USUARIO (HU-05) -->
+<div id="profileModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <svg class="icon" viewBox="0 0 24 24" fill="none">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" stroke="#22c55e" stroke-width="2"/>
+            </svg>
+            <div class="modal-title">Completa tu perfil (Opcional)</div>
+            <button class="modal-close" onclick="hideProfileModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Esta información es <strong>completamente opcional</strong> y se usa solo para análisis estadísticos agregados.</p>
+            <div class="profile-field">
+                <label>Rango de edad</label>
+                <select id="profileAge" class="input">
+                    <option value="">Selecciona...</option>
+                    <option value="18-24">18 - 24 años</option>
+                    <option value="25-34">25 - 34 años</option>
+                    <option value="35-44">35 - 44 años</option>
+                    <option value="45-54">45 - 54 años</option>
+                    <option value="55+">55 años o más</option>
+                </select>
+            </div>
+            <div class="profile-field">
+                <label>Género</label>
+                <select id="profileGender" class="input">
+                    <option value="">Selecciona...</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="prefiero-no-decir">Prefiero no decirlo</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <div class="profile-field">
+                <label>Escala salarial mensual aproximada</label>
+                <select id="profileSalary" class="input">
+                    <option value="">Selecciona...</option>
+                    <option value="menos-1-smmlv">Menos de 1 SMMLV</option>
+                    <option value="1-2-smmlv">1 - 2 SMMLV</option>
+                    <option value="2-4-smmlv">2 - 4 SMMLV</option>
+                    <option value="4-8-smmlv">4 - 8 SMMLV</option>
+                    <option value="mas-8-smmlv">Más de 8 SMMLV</option>
+                </select>
+            </div>
+            <p class="profile-note">Datos usados únicamente para análisis estadísticos agregados.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn secondary" onclick="hideProfileModal()">Omitir</button>
+            <button class="btn success" onclick="saveUserProfile()">Guardar perfil</button>
+        </div>
+    </div>
+</div>
+
+  <script src="../../app.js"></script>
+  <script src="./login.js"></script>
+</body>
+</html>

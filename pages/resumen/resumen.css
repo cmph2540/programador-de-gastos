@@ -1,0 +1,5 @@
+/* Estilos exclusivos de la pagina de resumen. */
+
+@media (max-width: 768px) {
+  #tablaResumen th, #tablaResumen td { padding: 0.4rem; font-size: 0.8rem; }
+}
