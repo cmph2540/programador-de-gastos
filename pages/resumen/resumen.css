@@ -1,5 +1,151 @@
 /* Estilos exclusivos de la pagina de resumen. */
 
-@media (max-width: 768px) {
-  #tablaResumen th, #tablaResumen td { padding: 0.4rem; font-size: 0.8rem; }
+/* Estilos base para la tabla */
+#tablaResumen th { white-space: nowrap; }
+#tablaResumen td { vertical-align: top; }
+
+/* Celdas con barras (Liquidez y Gastos) */
+#tablaResumen td:nth-child(3),
+#tablaResumen td:nth-child(4) {
+  min-width: 120px;
+}
+
+#tablaResumen .resumen-indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+#tablaResumen .bar {
+  flex-shrink: 0;
+  height: 12px;
+  min-height: 12px;
+}
+
+#tablaResumen .muted {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Media query para tablets y dispositivos pequeños */
+@media (max-width: 1024px) {
+  #tablaResumen {
+    font-size: 0.85rem;
+  }
+  
+  #tablaResumen th,
+  #tablaResumen td {
+    padding: 0.5rem 0.35rem;
+  }
+  
+  #tablaResumen td:nth-child(3),
+  #tablaResumen td:nth-child(4) {
+    min-width: 100px;
+  }
+
+  #tablaResumen .resumen-indicador {
+    gap: 0.3rem;
+  }
+  
+  #tablaResumen .muted {
+    font-size: 0.7rem;
+  }
+}
+
+/* Media query para móviles */
+@media (max-width: 640px) {
+  #tablaResumen {
+    font-size: 0.75rem;
+  }
+  
+  #tablaResumen th,
+  #tablaResumen td {
+    padding: 0.4rem 0.25rem;
+  }
+  
+  /* Columna Mes: más pequeña */
+  #tablaResumen th:nth-child(1),
+  #tablaResumen td:nth-child(1) {
+    min-width: 50px;
+  }
+  
+  /* Columna Dinero: ajusta ancho dinámico */
+  #tablaResumen th:nth-child(2),
+  #tablaResumen td:nth-child(2) {
+    min-width: 90px;
+  }
+  
+  #tablaResumen .chip {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  /* Columnas de barras: stack vertical con espacio controlado */
+  #tablaResumen td:nth-child(3),
+  #tablaResumen td:nth-child(4) {
+    min-width: 85px;
+  }
+
+  #tablaResumen .resumen-indicador {
+    gap: 0.25rem;
+  }
+  
+  #tablaResumen .bar {
+    height: 10px;
+    min-height: 10px;
+  }
+  
+  #tablaResumen .muted {
+    font-size: 0.65rem;
+    line-height: 1.2;
+  }
+}
+
+/* Dispositivos muy pequeños (< 480px) */
+@media (max-width: 480px) {
+  #tablaResumen {
+    font-size: 0.7rem;
+  }
+  
+  #tablaResumen th,
+  #tablaResumen td {
+    padding: 0.3rem 0.2rem;
+  }
+  
+  #tablaResumen th:nth-child(1),
+  #tablaResumen td:nth-child(1) {
+    min-width: 45px;
+  }
+  
+  #tablaResumen th:nth-child(2),
+  #tablaResumen td:nth-child(2) {
+    min-width: 75px;
+  }
+  
+  #tablaResumen .chip {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.3rem;
+  }
+  
+  #tablaResumen td:nth-child(3),
+  #tablaResumen td:nth-child(4) {
+    min-width: 70px;
+  }
+
+  #tablaResumen .resumen-indicador {
+    gap: 0.2rem;
+  }
+  
+  #tablaResumen .bar {
+    height: 8px;
+    min-height: 8px;
+  }
+  
+  #tablaResumen .muted {
+    font-size: 0.6rem;
+    line-height: 1.1;
+  }
 }

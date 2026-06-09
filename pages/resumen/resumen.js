@@ -17,8 +17,18 @@ window.APP_INITIAL_TAB = 'resumen';
             <tr>
                 <td>${Utils.escapeHTML(mes.nombre)}</td>
                 <td class="right"><span class="chip ${highs.has(mes.saldo) ? 'ok' : lows.has(mes.saldo) ? 'danger' : ''}">${Utils.fmtCOP.format(mes.saldo)}</span></td>
-                <td><div class="bar"><div class="fill liq" style="width:${mes.liqPct.toFixed(0)}%"></div></div><div class="muted ${mes.liqPct < 50 ? 'chip warn' : ''}">${Utils.fmtPct2(mes.liqPct)}</div></td>
-                <td><div class="bar"><div class="fill exp" style="width:${mes.expPct.toFixed(0)}%"></div></div><div class="muted ${mes.expPct > 50 ? 'chip warn' : ''}">${Utils.fmtPct2(mes.expPct)}</div></td>
+                <td>
+                    <div class="resumen-indicador resumen-indicador-liquidez">
+                        <div class="bar barraLiquidez"><div class="fill liq" style="width:${mes.liqPct.toFixed(0)}%"></div></div>
+                        <div class="muted porcentajeLiquidez ${mes.liqPct < 50 ? 'chip warn' : ''}">${Utils.fmtPct2(mes.liqPct)}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="resumen-indicador resumen-indicador-gastos">
+                        <div class="bar barraGastos"><div class="fill exp" style="width:${mes.expPct.toFixed(0)}%"></div></div>
+                        <div class="muted porcentajeGastos ${mes.expPct > 50 ? 'chip warn' : ''}">${Utils.fmtPct2(mes.expPct)}</div>
+                    </div>
+                </td>
             </tr>
         `).join('');
     }

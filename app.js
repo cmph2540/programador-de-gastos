@@ -1606,10 +1606,20 @@ function renderResumen(){
         if(lows.has(dinero)) dineroClass='danger';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${Utils.escapeHTML(m.nombre)}</td
-            <td class="right"><span class="chip ${dineroClass}">${Utils.fmtCOP.format(dinero)}</span></td
-            <td><div class="bar"><div class="fill liq" style="width:${liq.toFixed(0)}%"></div></div><div class="muted ${liq<50?'chip warn':''}">${Utils.fmtPct2(liq)}</div></td
-            <td><div class="bar"><div class="fill exp" style="width:${exp.toFixed(0)}%"></div></div><div class="muted ${exp>50?'chip warn':''}">${Utils.fmtPct2(exp)}</div></td>
+            <td>${Utils.escapeHTML(m.nombre)}</td>
+            <td class="right"><span class="chip ${dineroClass}">${Utils.fmtCOP.format(dinero)}</span></td>
+            <td>
+                <div class="resumen-indicador resumen-indicador-liquidez">
+                    <div class="bar barraLiquidez"><div class="fill liq" style="width:${liq.toFixed(0)}%"></div></div>
+                    <div class="muted porcentajeLiquidez ${liq<50?'chip warn':''}">${Utils.fmtPct2(liq)}</div>
+                </div>
+            </td>
+            <td>
+                <div class="resumen-indicador resumen-indicador-gastos">
+                    <div class="bar barraGastos"><div class="fill exp" style="width:${exp.toFixed(0)}%"></div></div>
+                    <div class="muted porcentajeGastos ${exp>50?'chip warn':''}">${Utils.fmtPct2(exp)}</div>
+                </div>
+            </td>
         `;
         frag.appendChild(tr);
     });
