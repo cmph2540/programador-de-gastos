@@ -11,6 +11,18 @@
 .col-ahorro-confirmado { position: relative; }
 .col-ahorro-confirmado.confirmado::before { content: "✓"; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: bold; }
 
+#tablaAhorros th:nth-child(5),
+#tablaAhorros td:nth-child(5) {
+  width: 9.5rem;
+  min-width: 9.5rem;
+}
+
+#tablaAhorros .input-ah-total {
+  min-width: 8.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes bankCelebrate {
   0% { transform: scale(1); }
   20% { transform: scale(1.03) rotate(0.5deg); }
@@ -23,10 +35,32 @@
 .bank.celebrate { animation: bankCelebrate 900ms ease; }
 
 @media (max-width: 768px) {
-  .plan-ahorro-mobile { display: flex; flex-direction: column; }
+  .plan-ahorro-mobile {
+    display: table;
+    table-layout: auto;
+    min-width: 760px;
+  }
   .bank-wrap { flex-direction: column; align-items: stretch; }
   #tablaAhorros { font-size: 0.8rem; }
   #tablaAhorros th, #tablaAhorros td { padding: 0.4rem 0.3rem; white-space: nowrap; }
+  #tablaAhorros th:nth-child(5),
+  #tablaAhorros td:nth-child(5) {
+    width: 10.5rem;
+    min-width: 10.5rem;
+  }
+
+  #tablaAhorros .col-ahorro-confirmado {
+    padding-left: 1rem;
+    overflow: visible;
+  }
+
+  #tablaAhorros .input-ah-total {
+    width: 100%;
+    min-width: 9rem;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
   .mobile-collapse-label::after {
     content: attr(data-label);
     display: block;
