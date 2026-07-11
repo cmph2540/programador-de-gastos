@@ -188,6 +188,9 @@ window.APP_INITIAL_TAB = 'inversiones';
             document.getElementById('invCompuesto').checked = false;
             document.getElementById('invVencimiento').value = '';
             renderInversiones();
+            renderAhorros();
+            renderResumen();
+            registerActivity();
             softToast('Inversión agregada', 'ok');
         });
 
