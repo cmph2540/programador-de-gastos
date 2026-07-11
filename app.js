@@ -515,6 +515,7 @@ function login(userEmail, password = null, isGoogleLogin = false, securityPhrase
     saveState();
     updateAuthUI();
     resetSessionActivityTimer();
+    activateCurrentSystemMonth();
     
     softToast(`Bienvenido ${user.name || user.email}`, 'ok');
     
@@ -1263,6 +1264,23 @@ function stopAdviceRotation() {
 
 /* ==== HELPERS ==== */
 function hasMonths(){ return state.meses.length>0; }
+function getCurrentSystemMonthIdx(){
+    if (!hasMonths()) return -1;
+    const now = new Date();
+    return state.meses.findIndex((m) => m.year === now.getFullYear() && m.monthIdx === now.getMonth());
+}
+function activateCurrentSystemMonth(){
+    if (!hasMonths()) {
+        activeMonthIdx = 0;
+        return;
+    }
+    const idx = getCurrentSystemMonthIdx();
+    activeMonthIdx = idx >= 0 ? idx : 0;
+    const sel = document.getElementById('mesSelector');
+    if (sel) {
+        sel.value = String(activeMonthIdx);
+    }
+}
 function selectedMonthIdx(){ 
     if (!hasMonths()) return 0;
     const sel = document.getElementById('mesSelector');
@@ -2876,6 +2894,7 @@ function init(){
         resetPasswordWithToken();
     }
 
+    activateCurrentSystemMonth();
     getCurrentPageModule()?.init?.();
     OnboardingTour.init();
     window.setTimeout(() => OnboardingTour.start(), 500);
