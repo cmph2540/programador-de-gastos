@@ -1280,6 +1280,7 @@ function activateCurrentSystemMonth(){
     if (sel) {
         sel.value = String(activeMonthIdx);
     }
+    syncCurrentMonthUI();
 }
 function selectedMonthIdx(){ 
     if (!hasMonths()) return 0;
@@ -2036,6 +2037,17 @@ function updatePrimaVisibility(){
     document.getElementById('chkPrima').checked = !!m.prima;
 }
 
+function syncCurrentMonthUI() {
+    updatePrimaVisibility();
+    updateMesEditChip();
+    renderIngresos();
+    renderGastos();
+    updateResumenContext();
+    renderInversiones();
+    renderAhorros();
+    registerActivity();
+}
+
 /* ==== INLINE CREATE ==== */
 function setupInlineCreate() {
     const selIng = document.getElementById('ingresoCategoria');
@@ -2517,14 +2529,7 @@ function setupEventListeners() {
     const mesSelector = document.getElementById('mesSelector');
     if (mesSelector) {
         mesSelector.addEventListener('change', ()=>{
-            updatePrimaVisibility();
-            updateMesEditChip();
-            renderIngresos();
-            renderGastos();
-            updateResumenContext();
-            renderInversiones();
-            renderAhorros();
-            registerActivity();
+            syncCurrentMonthUI();
         });
     }
 
