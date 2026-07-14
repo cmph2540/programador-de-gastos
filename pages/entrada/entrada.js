@@ -57,12 +57,12 @@ window.APP_INITIAL_TAB = 'entrada';
         chip.className = `chip ${chipClass}`;
         document.getElementById('saldoTexto').textContent = Utils.fmtCOP.format(saldo);
 
-        const liq = totalIng > 0 ? Math.min(100, Math.max(0, (saldo / totalIng) * 100)) : saldo > 0 ? 100 : 0;
-        const exp = Math.min(100, Math.max(0, 100 - liq));
+        const liq = totalIng > 0 ? Math.min(100, (saldo / totalIng) * 100) : saldo < 0 ? -100 : saldo > 0 ? 100 : 0;
+        const exp = 100 - liq;
 
         requestAnimationFrame(() => {
-            document.getElementById('liqFill').style.width = `${liq.toFixed(0)}%`;
-            document.getElementById('expFill').style.width = `${exp.toFixed(0)}%`;
+            document.getElementById('liqFill').style.width = `${Math.max(0, Math.min(100, liq)).toFixed(0)}%`;
+            document.getElementById('expFill').style.width = `${Math.max(0, Math.min(100, exp)).toFixed(0)}%`;
         });
 
         document.getElementById('liqTexto').textContent = Utils.fmtPct2(liq);
@@ -72,28 +72,10 @@ window.APP_INITIAL_TAB = 'entrada';
         const alertText = document.getElementById('alertaLiquidezTexto');
         if (!alertEl || !alertText) return;
 
-        if (totalIng === 0) {
-            alertEl.style.display = '';
-            alertEl.className = 'alert warn';
-            alertText.textContent = 'No hay ingresos registrados. Agrega ingresos para comenzar.';
-            return;
-        }
-
-        if (liq < 15) {
-            alertEl.style.display = '';
-            alertEl.className = 'alert danger';
-            alertText.textContent = 'Liquidez crítica (<15%). Considera reducir gastos o aumentar ingresos.';
-            return;
-        }
-
-        if (liq < 25) {
-            alertEl.style.display = '';
-            alertEl.className = 'alert warn';
-            alertText.textContent = 'Liquidez baja (<25%). Aumenta tu colchón de seguridad.';
-            return;
-        }
-
-        alertEl.style.display = 'none';
+        const liquidityStatus = getLiquidityStatus(liq);
+        alertEl.style.display = '';
+        alertEl.className = liquidityStatus.className;
+        alertText.textContent = liquidityStatus.message;
     }
 
     function renderIngresos() {

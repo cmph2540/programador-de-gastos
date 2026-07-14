@@ -1271,6 +1271,29 @@ function stopAdviceRotation() {
 /* ==== HELPERS ==== */
 function hasMonths(){ return state.meses.length>0; }
 
+function getLiquidityStatus(liquidity) {
+    if (liquidity >= 31) return {
+        className: 'alert success',
+        message: '💚 ¡Excelente! Tu liquidez refleja una posición financiera sólida. Estás cubriendo tus gastos con un amplio margen, lo que te permite ahorrar, invertir y prepararte para imprevistos con mayor tranquilidad. Mantén esta disciplina para fortalecer tu patrimonio y alcanzar tus metas más rápido.'
+    };
+    if (liquidity >= 21) return {
+        className: 'alert info',
+        message: '✅ Tu liquidez es saludable. Tienes un margen para afrontar imprevistos y seguir avanzando hacia tus metas financieras. Mantén el control de tus gastos y aprovecha este excedente para ahorrar o invertir.'
+    };
+    if (liquidity >= 11) return {
+        className: 'alert warn',
+        message: '⚠️ Tu margen financiero comienza a reducirse. Aunque aún cubres tus gastos, cualquier imprevisto puede afectar tu estabilidad. Revisa tus gastos no esenciales y fortalece tu ahorro antes de que la situación empeore.'
+    };
+    if (liquidity >= 0) return {
+        className: 'alert danger liquidity-critical',
+        message: '🚨 Tu liquidez está en un nivel crítico. Estás muy cerca de no poder cubrir tus gastos mensuales. Un gasto inesperado podría obligarte a endeudarte. Es momento de reducir gastos, posponer compras innecesarias y buscar aumentar tus ingresos.'
+    };
+    return {
+        className: 'alert danger liquidity-negative',
+        message: '🚨 Tu liquidez mensual es negativa. Estás gastando más de lo que generas. Si esta situación continúa, cada mes dependerás de deuda o de tus ahorros para sobrevivir, comprometiendo tu estabilidad financiera. Actúa hoy: reduce gastos, aumenta ingresos o ambas. Ignorar esta alerta hará que recuperar el control sea cada vez más difícil.'
+    };
+}
+
 /**
  * Obtiene el índice del mes actual dentro de los meses creados.
  * Si el periodo actual no existe, devuelve el mes disponible más cercano.
@@ -1607,12 +1630,12 @@ function updateResumenContext(){
     chip.className = `chip ${chipClass}`;
     document.getElementById('saldoTexto').textContent = Utils.fmtCOP.format(saldo);
 
-    const liq = totalIng > 0 ? Math.min(100, Math.max(0, (saldo/totalIng*100))) : saldo > 0 ? 100 : 0;
-    const exp = Math.min(100, Math.max(0, (100 - liq)));
+    const liq = totalIng > 0 ? Math.min(100, (saldo / totalIng) * 100) : saldo < 0 ? -100 : saldo > 0 ? 100 : 0;
+    const exp = 100 - liq;
     
     requestAnimationFrame(() => {
-        document.getElementById('liqFill').style.width = `${liq.toFixed(0)}%`;
-        document.getElementById('expFill').style.width = `${exp.toFixed(0)}%`;
+        document.getElementById('liqFill').style.width = `${Math.max(0, Math.min(100, liq)).toFixed(0)}%`;
+        document.getElementById('expFill').style.width = `${Math.max(0, Math.min(100, exp)).toFixed(0)}%`;
     });
     
     document.getElementById('liqTexto').textContent = Utils.fmtPct2(liq);
@@ -1621,21 +1644,10 @@ function updateResumenContext(){
     const alertEl = document.getElementById('alertaLiquidez');
     const alertaTexto = document.getElementById('alertaLiquidezTexto');
     
-    if (totalIng === 0) {
-        alertEl.style.display = '';
-        alertaTexto.textContent = "No hay ingresos registrados. Agrega ingresos para comenzar.";
-        alertEl.className = 'alert warn';
-    } else if (liq < 15) {
-        alertEl.style.display = '';
-        alertaTexto.textContent = "⚠️ Liquidez crítica (<15%). Considera reducir gastos o aumentar ingresos.";
-        alertEl.className = 'alert danger';
-    } else if (liq < 25) {
-        alertEl.style.display = '';
-        alertaTexto.textContent = "Liquidez baja (<25%). Aumenta tu colchón de seguridad.";
-        alertEl.className = 'alert warn';
-    } else {
-        alertEl.style.display = 'none';
-    }
+    const liquidityStatus = getLiquidityStatus(liq);
+    alertEl.style.display = '';
+    alertEl.className = liquidityStatus.className;
+    alertaTexto.textContent = liquidityStatus.message;
 }
 
 function renderResumen(){
@@ -2066,8 +2078,8 @@ function calcularMes(m){
     let totalGas = m.gastos.reduce((a,b)=>a+(b.valor ?? b.valorTotal ?? 0),0);
     totalGas += getTotalGastosHormiga();
     m.saldo = totalIng - totalGas;
-    m.liqPct = totalIng>0 ? Math.min(100, Math.max(0, (m.saldo/totalIng*100))) : 0;
-    m.expPct = Math.min(100, Math.max(0, (100 - m.liqPct)));
+    m.liqPct = totalIng > 0 ? Math.min(100, (m.saldo / totalIng) * 100) : m.saldo < 0 ? -100 : m.saldo > 0 ? 100 : 0;
+    m.expPct = 100 - m.liqPct;
     m.ahorroValor = Math.round(m.saldo * ((m.ahorroPct ?? 25)/100));
     m.gastoValor  = Math.round(m.saldo * ((m.gastoPct ?? 35)/100));
 }
