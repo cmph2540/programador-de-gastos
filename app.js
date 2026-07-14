@@ -302,7 +302,6 @@ let state = {
 let tempIngresos = [];
 let tempGastos   = [];
 let tempInversiones = [];
-let activeMonthIdx = 0;
 let adviceTimer = null;
 let hormigaTooltipTimeout = null;
 let sessionActivityTimer = null;
@@ -515,7 +514,6 @@ function login(userEmail, password = null, isGoogleLogin = false, securityPhrase
     saveState();
     updateAuthUI();
     resetSessionActivityTimer();
-    activateCurrentSystemMonth();
     
     softToast(`Bienvenido ${user.name || user.email}`, 'ok');
     
@@ -1208,6 +1206,14 @@ function refreshGastoTipos(){
     sel.append(new Option('➕ Crear nuevo tipo…','__custom__'));
 }
 
+function refreshInvCats(){
+    const sel = document.getElementById('invConcepto');
+    sel.innerHTML=''; 
+    sel.append(new Option('Selecciona inversión','',true,true));
+    state.invCats.forEach(c=> sel.append(new Option(c,c)));
+    sel.append(new Option('➕ Crear nuevo concepto…','__custom__'));
+}
+
 /* ==== NAVEGACIÓN ==== */
 function setTab(tab){
     if (tab === 'admin' && !isAdmin()) {
@@ -1264,38 +1270,11 @@ function stopAdviceRotation() {
 
 /* ==== HELPERS ==== */
 function hasMonths(){ return state.meses.length>0; }
-function getCurrentSystemMonthIdx(){
-    if (!hasMonths()) return -1;
-    const now = new Date();
-    return state.meses.findIndex((m) => m.year === now.getFullYear() && m.monthIdx === now.getMonth());
-}
-function activateCurrentSystemMonth(){
-    if (!hasMonths()) {
-        activeMonthIdx = 0;
-        return;
-    }
-    const idx = getCurrentSystemMonthIdx();
-    activeMonthIdx = idx >= 0 ? idx : 0;
-    const sel = document.getElementById('mesSelector');
-    if (sel) {
-        sel.value = String(activeMonthIdx);
-    }
-    syncCurrentMonthUI();
-}
-function selectedMonthIdx(){ 
-    if (!hasMonths()) return 0;
-    const sel = document.getElementById('mesSelector');
-    if (sel && sel.value !== null && sel.value !== undefined && sel.value !== '') {
-        const idx = parseInt(sel.value, 10);
-        if (!Number.isNaN(idx) && idx >= 0 && idx < state.meses.length) {
-            activeMonthIdx = idx;
-            return idx;
-        }
-    }
-    if (activeMonthIdx < 0 || activeMonthIdx >= state.meses.length) {
-        activeMonthIdx = 0;
-    }
-    return activeMonthIdx;
+function selectedMonthIdx(){
+    const selector = document.getElementById('mesSelector');
+    const idx = parseInt(selector?.value || '0', 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= state.meses.length) return 0;
+    return idx;
 }
 function currentMonthObj(){ return hasMonths() ? state.meses[selectedMonthIdx()] : null; }
 function getIngresos(){ return hasMonths() ? state.meses[selectedMonthIdx()].ingresos : tempIngresos; }
@@ -1886,10 +1865,70 @@ function renderAhorros(){
 
 /* ==== INVERSIONES ==== */
 function renderInversiones(){
-    const invModule = window.PageModules?.inversiones;
-    if (invModule && typeof invModule.activate === 'function') {
-        invModule.activate();
-    }
+    const disponible = dineroDisponibleActual();
+    document.getElementById('invDineroDisponible').textContent = Utils.fmtCOP.format(disponible);
+    document.getElementById('invMesLabel').textContent = hasMonths() ? (`Mes en edición: ${currentMonthObj().nombre}`) : 'Mes actual (temporal)';
+    document.getElementById('invFechaInicio').value = Utils.fmtYYYYMMDD(Utils.hoyLocal());
+
+    const tbody = document.querySelector('#tablaInv tbody');
+    tbody.innerHTML='';
+    let totalValor=0, totalMensual=0, totalAnual=0;
+    const totalInvAll = state.inversiones.reduce((a,b)=>a+b.valor,0) || 1;
+    const invsToShow = getInversionesMes();
+
+    invsToShow.forEach((inv, idx)=>{
+        const pctMes = (typeof inv.rentPct === 'number' ? inv.rentPct : 0);
+        const r = Math.max(-100, pctMes) / 100;
+        const rendimientoMes1 = Math.round(inv.valor * r);
+        let totalAnualInv = 0, saldoFinal = inv.valor;
+        if(inv.compuesto){
+            let saldo = inv.valor;
+            for(let m=1; m<=12; m++){
+                const rendimiento = Math.round(saldo * r);
+                totalAnualInv += rendimiento;
+                saldo += rendimiento;
+            }
+            saldoFinal = saldo;
+        }else{
+            totalAnualInv = rendimientoMes1 * 12;
+            saldoFinal = inv.valor + totalAnualInv;
+        }
+        const partPct = Math.min(100, Math.max(0, inv.valor/totalInvAll*100));
+        totalValor   += inv.valor;
+        totalMensual += rendimientoMes1;
+        totalAnual   += totalAnualInv;
+        const est = (inv.concepto==='CDT') ? estadoCDT(inv.vencISO) : 'Activa';
+        const estClass = est==='Próximo a vencer' ? 'chip warn' : (est==='Vencido' ? 'chip danger' : 'chip ok');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td title="${Utils.escapeHTML(inv.concepto)}">${Utils.escapeHTML(inv.concepto)}</td
+            <td class="right">${Utils.fmtCOP.format(inv.valor)}</td
+            <td class="right">${(pctMes||0).toFixed(2)}%</td
+            <td class="right">${Utils.fmtCOP.format(rendimientoMes1)}</td
+            <td class="right">${Utils.fmtCOP.format(totalAnualInv)}</td
+            <td class="right">${partPct.toFixed(0)}%</td
+            <td class="right">${Utils.fmtCOP.format(saldoFinal)}</td
+            <td>${Utils.escapeHTML(inv.fechaInicio || '—')}</td
+            <td>${Utils.escapeHTML(inv.vencISO || '—')}</td
+            <td><span class="${estClass}" title="${Utils.escapeHTML(est)}">${Utils.escapeHTML(est)}</span></td
+            <td class="right">${inv.compuesto ? 'Sí' : 'No'}</td
+            <td class="right"><button class="btn warn" data-del-inv="${idx}">Quitar</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('totalInvertido').textContent = Utils.fmtCOP.format(totalValor);
+    document.getElementById('totalRendimientoMensual').textContent = Utils.fmtCOP.format(totalMensual);
+    document.getElementById('totalRendimientoAnual').textContent = Utils.fmtCOP.format(totalAnual);
+    document.getElementById('totalInvMasUtilidad').textContent = Utils.fmtCOP.format(totalValor + totalAnual);
+    document.getElementById('invTotalChip').textContent = `Total invertido: ${Utils.fmtCOP.format(state.inversiones.reduce((a,b)=>a+b.valor,0))}`;
+    renderInvTop5Chart();
+
+    const proximos = invsToShow.filter(inv => inv.concepto==='CDT' && inv.vencISO && diasHasta(inv.vencISO) >= 0 && diasHasta(inv.vencISO) <= 30);
+    const vencidos = invsToShow.filter(inv => inv.concepto==='CDT' && inv.vencISO && diasHasta(inv.vencISO) < 0);
+    
+    if(proximos.length>0) softToast(`🟡 ${proximos.length} CDT(s) a ≤30 días. Valida renovación.`, 'warn');
+    if(vencidos.length>0) softToast(`🔴 ${vencidos.length} CDT(s) vencidos. Considera renovar o liquidar.`, 'danger');
 }
 
 function renderInvTop5Chart(){
@@ -2005,11 +2044,9 @@ function distribuirCuotas(total, n){
 /* ==== SELECTOR DE MES ==== */
 function refreshMesSelector(){
     const sel = document.getElementById('mesSelector');
-    if (!sel) return;
     sel.innerHTML=''; 
     state.meses.forEach((m,i)=> sel.append(new Option(m.nombre, i)));
     sel.disabled = !state.editingEnabled || state.meses.length===0;
-    sel.value = String(selectedMonthIdx());
     updatePrimaVisibility(); 
     updateMesEditChip();
 }
@@ -2027,25 +2064,14 @@ function updateMesEditChip(){
 
 function updatePrimaVisibility(){
     const sel = document.getElementById('mesSelector');
-    if(!hasMonths() || (sel && sel.disabled)) {
+    if(sel.disabled) {
         document.getElementById('primaField').style.display='none';
         return;
     }
-    const m = state.meses[selectedMonthIdx()];
+    const m = state.meses[parseInt(sel.value||'0',10)];
     const show = (m.monthIdx===5 || m.monthIdx===11);
     document.getElementById('primaField').style.display = show ? '' : 'none';
     document.getElementById('chkPrima').checked = !!m.prima;
-}
-
-function syncCurrentMonthUI() {
-    updatePrimaVisibility();
-    updateMesEditChip();
-    renderIngresos();
-    renderGastos();
-    updateResumenContext();
-    renderInversiones();
-    renderAhorros();
-    registerActivity();
 }
 
 /* ==== INLINE CREATE ==== */
@@ -2526,19 +2552,22 @@ function setupEventListeners() {
         registerActivity();
     });
 
-    const mesSelector = document.getElementById('mesSelector');
-    if (mesSelector) {
-        mesSelector.addEventListener('change', ()=>{
-            syncCurrentMonthUI();
-        });
-    }
+    document.getElementById('mesSelector').addEventListener('change', ()=>{
+        updatePrimaVisibility();
+        updateMesEditChip();
+        renderIngresos();
+        renderGastos();
+        updateResumenContext();
+        renderInversiones();
+        renderAhorros();
+        registerActivity();
+    });
 
     document.getElementById('btnEditarMes').addEventListener('click', ()=>{
         if(!hasMonths()) return softToast('Primero crea los 12 meses','warn');
         state.editingEnabled = true;
         saveState();
-        const selector = document.getElementById('mesSelector');
-        if (selector) selector.disabled = false;
+        document.getElementById('mesSelector').disabled = false;
         updateMesEditChip();
         softToast('Edición de mes habilitada','ok');
         registerActivity();
@@ -2571,6 +2600,88 @@ function setupEventListeners() {
         renderAhorros();
         updateResumenContext();
         registerActivity();
+    });
+
+    document.getElementById('btnAddInv').addEventListener('click', ()=>{
+        if (!requireAuth()) return;
+        const concepto = document.getElementById('invConcepto').value;
+        const valorRaw = document.getElementById('invValor').value;
+        const valor = Utils.parseCurrency(valorRaw);
+        const rentPct = parseFloat(document.getElementById('invRentMensual').value||'0');
+        const compuesto = document.getElementById('invCompuesto').checked;
+        const vencISO = document.getElementById('invVencimiento').value;
+        
+        if(!concepto || concepto==='__custom__') return softToast('Selecciona una inversión','warn');
+        if(!isFinite(valor) || valor<=0) return softToast('Valor inválido','warn');
+        if(!isFinite(rentPct) || rentPct < -100) return softToast('Rentabilidad inválida','warn');
+        if(valor > dineroDisponibleActual()) return softToast('Valor supera el dinero disponible','warn');
+        if(concepto==='CDT' && !vencISO) return softToast('Selecciona fecha de vencimiento','warn');
+        
+        if(hasMonths()){
+            state.inversiones.push({
+                concepto, valor, rentPct, compuesto,
+                fechaInicio: Utils.fmtYYYYMMDD(Utils.hoyLocal()),
+                monthId: currentMonthObj().id,
+                vencISO: concepto==='CDT' ? vencISO : '',
+                ahorroConfirmado: false
+            });
+            saveState();
+        }else{
+            tempInversiones.push({
+                concepto, valor, rentPct, compuesto,
+                fechaInicio: Utils.fmtYYYYMMDD(Utils.hoyLocal()),
+                monthId: null,
+                vencISO: concepto==='CDT' ? vencISO : '',
+                ahorroConfirmado: false
+            });
+        }
+        
+        document.getElementById('invValor').value='';
+        document.getElementById('invRentMensual').value='';
+        document.getElementById('invCompuesto').checked=false;
+        document.getElementById('invVencimiento').value='';
+        softToast('Inversión agregada','ok');
+        renderInversiones();
+        renderAhorros();
+        registerActivity();
+    });
+
+    document.querySelector('#tablaInv tbody').addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-del-inv]');
+        if(!btn) return;
+        const idx = parseInt(btn.dataset.delInv,10);
+        
+        // Obtener el nombre de la inversión
+        let invName = '';
+        if(hasMonths()){
+            const mId = currentMonthObj().id;
+            const invs = state.inversiones.filter(inv => inv.monthId === mId);
+            if(invs[idx]) invName = invs[idx].concepto;
+        }else{
+            if(tempInversiones[idx]) invName = tempInversiones[idx].concepto;
+        }
+        
+        ConfirmModal.show(
+            '¿Estás seguro de que deseas eliminar esta inversión?',
+            invName,
+            {
+                okText: 'Eliminar',
+                callback: () => {
+                    if(hasMonths()){
+                        const mId = currentMonthObj().id;
+                        const indices = state.inversiones.reduce((acc, inv, i)=>{ if(inv.monthId===mId) acc.push(i); return acc; }, []);
+                        if(indices[idx] !== undefined) state.inversiones.splice(indices[idx],1);
+                        saveState();
+                    }else{
+                        tempInversiones.splice(idx,1);
+                    }
+                    softToast('Inversión eliminada','warn');
+                    renderInversiones();
+                    renderAhorros();
+                    registerActivity();
+                }
+            }
+        );
     });
 
     document.getElementById('btnAplicarPorcentajes').addEventListener('click', () => {
@@ -2899,7 +3010,6 @@ function init(){
         resetPasswordWithToken();
     }
 
-    activateCurrentSystemMonth();
     getCurrentPageModule()?.init?.();
     OnboardingTour.init();
     window.setTimeout(() => OnboardingTour.start(), 500);
