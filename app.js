@@ -1270,11 +1270,57 @@ function stopAdviceRotation() {
 
 /* ==== HELPERS ==== */
 function hasMonths(){ return state.meses.length>0; }
+
+/**
+ * Obtiene el índice del mes actual dentro de los meses creados.
+ * Si el periodo actual no existe, devuelve el mes disponible más cercano.
+ */
+function getCurrentMonthIndex(){
+    if (!hasMonths()) return 0;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const index = state.meses.findIndex((month) =>
+        month.monthIdx === currentMonth && month.year === currentYear
+    );
+
+    if (index !== -1) return index;
+
+    return state.meses
+        .map((month, monthIndex) => ({
+            monthIndex,
+            diff: Math.abs((month.year - currentYear) * 12 + (month.monthIdx - currentMonth))
+        }))
+        .sort((a, b) => a.diff - b.diff)[0]?.monthIndex ?? 0;
+}
+
 function selectedMonthIdx(){
     const selector = document.getElementById('mesSelector');
-    const idx = parseInt(selector?.value || '0', 10);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= state.meses.length) return 0;
-    return idx;
+    if (!selector) return getCurrentMonthIndex();
+
+    if (!selector.disabled && selector.value) {
+        const idx = parseInt(selector.value, 10);
+        if (Number.isFinite(idx) && idx >= 0 && idx < state.meses.length) return idx;
+    }
+
+    return getCurrentMonthIndex();
+}
+
+function syncToCurrentMonth(){
+    if (!hasMonths()) {
+        softToast('Primero crea los 12 meses', 'warn');
+        return;
+    }
+
+    const currentIdx = getCurrentMonthIndex();
+    const selector = document.getElementById('mesSelector');
+    if (selector) {
+        selector.value = String(currentIdx);
+        selector.dispatchEvent(new Event('change'));
+    }
+
+    softToast(`Mostrando ${state.meses[currentIdx].nombre}`, 'ok');
 }
 function currentMonthObj(){ return hasMonths() ? state.meses[selectedMonthIdx()] : null; }
 function getIngresos(){ return hasMonths() ? state.meses[selectedMonthIdx()].ingresos : tempIngresos; }
@@ -1375,7 +1421,7 @@ function renderGastos(){
         tdVal.textContent = Utils.fmtCOP.format(valorMostrar);
         const tdPct  = document.createElement('td'); 
         tdPct.className='right'; 
-        tdPct.textContent = `${pct.toFixed(0)}%`;
+        tdPct.textContent = `${pct.toFixed(1)}%`;
         const tdPag  = document.createElement('td'); 
         tdPag.className='right';
         tdPag.innerHTML = `
@@ -1402,7 +1448,7 @@ function renderGastos(){
         tr.innerHTML = `
             <td colspan="2"><strong>🐜 Total Gastos Hormiga</strong></td>
             <td class="right"><strong>${Utils.fmtCOP.format(totalHormiga)}</strong></td>
-            <td class="right">${total > 0 ? ((totalHormiga/total*100).toFixed(0)) : 0}%</td
+            <td class="right">${total > 0 ? ((totalHormiga/total*100).toFixed(1)) : '0.0'}%</td
             <td class="right"></td
             <td class="right"></td>
         `;
@@ -1610,6 +1656,9 @@ function renderResumen(){
         if(highs.has(dinero)) dineroClass='ok'; 
         if(lows.has(dinero)) dineroClass='danger';
         const tr = document.createElement('tr');
+        if (m.monthIdx === new Date().getMonth() && m.year === new Date().getFullYear()) {
+            tr.classList.add('mes-actual');
+        }
         tr.innerHTML = `
             <td>${Utils.escapeHTML(m.nombre)}</td>
             <td class="right"><span class="chip ${dineroClass}">${Utils.fmtCOP.format(dinero)}</span></td>
@@ -1906,7 +1955,7 @@ function renderInversiones(){
             <td class="right">${(pctMes||0).toFixed(2)}%</td
             <td class="right">${Utils.fmtCOP.format(rendimientoMes1)}</td
             <td class="right">${Utils.fmtCOP.format(totalAnualInv)}</td
-            <td class="right">${partPct.toFixed(0)}%</td
+            <td class="right">${partPct.toFixed(1)}%</td
             <td class="right">${Utils.fmtCOP.format(saldoFinal)}</td
             <td>${Utils.escapeHTML(inv.fechaInicio || '—')}</td
             <td>${Utils.escapeHTML(inv.vencISO || '—')}</td
@@ -2044,22 +2093,43 @@ function distribuirCuotas(total, n){
 /* ==== SELECTOR DE MES ==== */
 function refreshMesSelector(){
     const sel = document.getElementById('mesSelector');
-    sel.innerHTML=''; 
-    state.meses.forEach((m,i)=> sel.append(new Option(m.nombre, i)));
+    if (!sel) return;
+
+    const currentIdx = getCurrentMonthIndex();
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const previousValue = sel.value;
+    sel.innerHTML='';
+    state.meses.forEach((m,i)=> {
+        const isCurrent = m.monthIdx === currentMonth && m.year === currentYear;
+        const option = new Option(isCurrent ? `${m.nombre} 📍` : m.nombre, i);
+        if (isCurrent) {
+            option.style.fontWeight = 'bold';
+            option.style.color = '#22c55e';
+        }
+        sel.append(option);
+    });
     sel.disabled = !state.editingEnabled || state.meses.length===0;
+    const previousIdx = parseInt(previousValue, 10);
+    sel.value = String(!sel.disabled && Number.isFinite(previousIdx) && previousIdx >= 0 && previousIdx < state.meses.length ? previousIdx : currentIdx);
     updatePrimaVisibility(); 
     updateMesEditChip();
 }
 
 function updateMesEditChip(){
     const info = document.getElementById('mesEditInfo');
-    if(!state.editingEnabled || !hasMonths()){ 
-        info.style.display='none'; 
+    if(!info || !state.editingEnabled || !hasMonths()){
+        if (info) info.style.display='none';
         return; 
     }
     const m = state.meses[selectedMonthIdx()];
+    if (!m) return;
     info.style.display=''; 
-    document.getElementById('mesEditChip').textContent = `Editando: ${m.nombre}`;
+    const chip = document.getElementById('mesEditChip');
+    if (!chip) return;
+    const isCurrentMonth = m.monthIdx === new Date().getMonth() && m.year === new Date().getFullYear();
+    chip.textContent = `Editando: ${m.nombre}${isCurrentMonth ? ' 📍 (mes actual)' : ''}`;
+    chip.className = isCurrentMonth ? 'chip ok' : 'chip edit';
 }
 
 function updatePrimaVisibility(){

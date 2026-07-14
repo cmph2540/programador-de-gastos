@@ -1,6 +1,49 @@
 window.APP_INITIAL_TAB = 'inversiones';
 
 (window.PageModules = window.PageModules || {}).inversiones = (() => {
+    function createInversionId(prefix = 'inv') {
+        return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function migrateInversionesWithIds() {
+        let stateChanged = false;
+
+        state.inversiones.forEach((inversion) => {
+            if (!inversion.id) {
+                inversion.id = createInversionId();
+                stateChanged = true;
+            }
+        });
+        tempInversiones.forEach((inversion) => {
+            if (!inversion.id) inversion.id = createInversionId('temp-inv');
+        });
+
+        if (stateChanged) saveState();
+    }
+
+    function addInversion(concepto, valor, rentPct, compuesto, vencISO) {
+        const inversion = {
+            id: createInversionId(),
+            concepto,
+            valor,
+            rentPct,
+            compuesto,
+            fechaInicio: Utils.fmtYYYYMMDD(Utils.hoyLocal()),
+            monthId: hasMonths() ? currentMonthObj().id : null,
+            vencISO: concepto === 'CDT' ? vencISO : '',
+            createdAt: new Date().toISOString()
+        };
+
+        if (hasMonths()) {
+            state.inversiones.push(inversion);
+            saveState();
+        } else {
+            tempInversiones.push(inversion);
+        }
+
+        return inversion.id;
+    }
+
     function refreshInvCats() {
         const sel = document.getElementById('invConcepto');
         if (!sel) return;
@@ -88,7 +131,7 @@ window.APP_INITIAL_TAB = 'inversiones';
         let totalAnual = 0;
         const totalInvAll = state.inversiones.reduce((acc, inv) => acc + inv.valor, 0) || 1;
 
-        getInversionesMes().forEach((inv, idx) => {
+        getInversionesMes().forEach((inv) => {
             const rentPct = typeof inv.rentPct === 'number' ? inv.rentPct : 0;
             const monthlyRate = Math.max(-100, rentPct) / 100;
             const rendimientoMes = Math.round(inv.valor * monthlyRate);
@@ -118,13 +161,13 @@ window.APP_INITIAL_TAB = 'inversiones';
                     <td class="right">${rentPct.toFixed(2)}%</td>
                     <td class="right">${Utils.fmtCOP.format(rendimientoMes)}</td>
                     <td class="right">${Utils.fmtCOP.format(totalAnualInv)}</td>
-                    <td class="right">${Math.min(100, Math.max(0, (inv.valor / totalInvAll) * 100)).toFixed(0)}%</td>
+                    <td class="right">${Math.min(100, Math.max(0, (inv.valor / totalInvAll) * 100)).toFixed(1)}%</td>
                     <td class="right">${Utils.fmtCOP.format(saldoFinal)}</td>
                     <td>${Utils.escapeHTML(inv.fechaInicio || '—')}</td>
                     <td>${Utils.escapeHTML(inv.vencISO || '—')}</td>
                     <td><span class="${stateClass}">${Utils.escapeHTML(estado)}</span></td>
                     <td class="right">${inv.compuesto ? 'Sí' : 'No'}</td>
-                    <td class="right"><button class="btn warn" data-del-inv="${idx}">Quitar</button></td>
+                    <td class="right"><button class="btn warn" data-del-inv="${inv.id}">Quitar</button></td>
                 </tr>
             `);
         });
@@ -176,13 +219,7 @@ window.APP_INITIAL_TAB = 'inversiones';
             if (!isFinite(rentPct) || rentPct < -100) return softToast('Rentabilidad inválida', 'warn');
             if (valor > dineroDisponibleActualInv()) return softToast('Valor supera el dinero disponible', 'warn');
             if (concepto === 'CDT' && !vencISO) return softToast('Selecciona fecha de vencimiento', 'warn');
-            const inversion = { concepto, valor, rentPct, compuesto, fechaInicio: Utils.fmtYYYYMMDD(Utils.hoyLocal()), monthId: hasMonths() ? currentMonthObj().id : null, vencISO: concepto === 'CDT' ? vencISO : '' };
-            if (hasMonths()) {
-                state.inversiones.push(inversion);
-                saveState();
-            } else {
-                tempInversiones.push(inversion);
-            }
+            addInversion(concepto, valor, rentPct, compuesto, vencISO);
             document.getElementById('invValor').value = '';
             document.getElementById('invRentMensual').value = '';
             document.getElementById('invCompuesto').checked = false;
@@ -194,37 +231,37 @@ window.APP_INITIAL_TAB = 'inversiones';
         document.querySelector('#tablaInv tbody').addEventListener('click', (event) => {
             const btn = event.target.closest('button[data-del-inv]');
             if (!btn) return;
-            const idx = parseInt(btn.dataset.delInv, 10);
-            
-            // Obtener el nombre de la inversión
-            let invName = '';
-            if (hasMonths()) {
-                const monthId = currentMonthObj().id;
-                const invs = state.inversiones.filter(inv => inv.monthId === monthId);
-                if (invs[idx]) invName = invs[idx].concepto;
-            } else {
-                if (tempInversiones[idx]) invName = tempInversiones[idx].concepto;
+            const invId = btn.dataset.delInv;
+            const inversiones = hasMonths() ? state.inversiones : tempInversiones;
+            const invIndex = inversiones.findIndex((inversion) => inversion.id === invId);
+            const inversion = inversiones[invIndex];
+
+            if (!inversion) {
+                softToast('Inversión no encontrada', 'warn');
+                return;
             }
             
             ConfirmModal.show(
                 '¿Estás seguro de que deseas eliminar esta inversión?',
-                invName,
+                inversion.concepto,
                 {
                     okText: 'Eliminar',
                     callback: () => {
+                        const target = hasMonths() ? state.inversiones : tempInversiones;
+                        const currentIndex = target.findIndex((item) => item.id === invId);
+                        if (currentIndex === -1) {
+                            softToast('Inversión no encontrada', 'warn');
+                            return;
+                        }
+
                         if (hasMonths()) {
-                            const monthId = currentMonthObj().id;
-                            const indices = state.inversiones.reduce((acc, inv, invIdx) => {
-                                if (inv.monthId === monthId) acc.push(invIdx);
-                                return acc;
-                            }, []);
-                            if (indices[idx] !== undefined) state.inversiones.splice(indices[idx], 1);
+                            state.inversiones.splice(currentIndex, 1);
                             saveState();
                         } else {
-                            tempInversiones.splice(idx, 1);
+                            tempInversiones.splice(currentIndex, 1);
                         }
                         renderInversiones();
-                        softToast('Inversión eliminada', 'warn');
+                        softToast('Inversión eliminada', 'ok');
                     }
                 }
             );
@@ -238,6 +275,7 @@ window.APP_INITIAL_TAB = 'inversiones';
     }
 
     function init() {
+        migrateInversionesWithIds();
         setupInlineCreate();
         setupListeners();
         activate();

@@ -532,6 +532,23 @@
       </div>
     </div>
   </div>
+
+  <div id="confirmModal" class="modal-overlay">
+    <div class="confirm-modal-content">
+      <div class="confirm-modal-header">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v2m0 4h0m9-4a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="confirm-modal-title">Confirmar eliminación</div>
+      </div>
+      <div class="confirm-modal-body">
+        <div class="confirm-modal-message" id="confirmMessage">¿Eliminar este elemento?</div>
+        <div class="confirm-modal-item" id="confirmItem" style="display:none;"></div>
+      </div>
+      <div class="confirm-modal-footer">
+        <button id="btnConfirmCancel" class="btn secondary" type="button">Cancelar</button>
+        <button id="btnConfirmOk" class="btn danger" type="button">Eliminar</button>
+      </div>
+    </div>
+  </div>
   
   <script src="./inversiones.js"></script>
   <script src="../../app.js"></script>

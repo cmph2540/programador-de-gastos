@@ -143,6 +143,12 @@
             <label>Selecciona mes a editar</label>
             <select id="mesSelector" disabled></select>
           </div>
+          <div class="field" style="align-self:flex-end">
+            <button class="btn secondary sync-month-btn" type="button" onclick="syncToCurrentMonth()" title="Ir al mes actual">
+              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 8v5l3 3M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="#4fc3f7" stroke-width="2"/></svg>
+              Mes actual 📍
+            </button>
+          </div>
           <div class="field edit-info" id="mesEditInfo">
             <label>Mes en edición</label>
             <div id="mesEditChip" class="chip edit">Editando: —</div>

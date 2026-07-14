@@ -13,8 +13,10 @@ window.APP_INITIAL_TAB = 'resumen';
         const lows = new Set(sortedVals.slice(0, 2));
         const highs = new Set(sortedVals.slice(-2));
 
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
         tbody.innerHTML = mesesOrd.map((mes) => `
-            <tr>
+            <tr class="${mes.monthIdx === currentMonth && mes.year === currentYear ? 'mes-actual' : ''}">
                 <td>${Utils.escapeHTML(mes.nombre)}</td>
                 <td class="right"><span class="chip ${highs.has(mes.saldo) ? 'ok' : lows.has(mes.saldo) ? 'danger' : ''}">${Utils.fmtCOP.format(mes.saldo)}</span></td>
                 <td>

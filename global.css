@@ -864,6 +864,23 @@ section { animation: fadeIn 0.3s ease-out; }
 .privacy-content ul, .terms-content ul { margin: 0.5rem 0 0.5rem 1.5rem; }
 .privacy-content li, .terms-content li { margin: 0.25rem 0; }
 
+.mes-actual-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#tablaResumen tr.mes-actual {
+  background: rgba(34, 197, 94, 0.08);
+  border-left: 3px solid var(--accent);
+}
+
 @media (max-width: 768px) {
   .footer-content { grid-template-columns: 1fr; gap: 1.5rem; }
   .footer-bottom { flex-direction: column; text-align: center; }

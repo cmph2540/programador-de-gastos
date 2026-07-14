@@ -24,8 +24,7 @@ window.APP_INITIAL_TAB = 'entrada';
     }
 
     function selectedMonthIdxEntrada() {
-        const selector = document.getElementById('mesSelector');
-        return parseInt(selector?.value || '0', 10);
+        return selectedMonthIdx();
     }
 
     function getIngresosEntrada() {
@@ -259,7 +258,7 @@ window.APP_INITIAL_TAB = 'entrada';
                 <td>${Utils.escapeHTML((gasto.desc || '—') + cuotaTxt)}</td>
                 <td>${Utils.escapeHTML(gasto.tipo || '—')}</td>
                 <td class="right">${Utils.fmtCOP.format(valor)}</td>
-                <td class="right">${total > 0 ? ((valor / total) * 100).toFixed(0) : 0}%</td>
+                <td class="right">${total > 0 ? ((valor / total) * 100).toFixed(1) : '0.0'}%</td>
                 <td class="right">
                     <label>
                         <input type="checkbox" data-pagado="${idx}" ${gasto.pagado ? 'checked' : ''} ${hasEntradaMonths() ? '' : 'disabled'}>
@@ -280,7 +279,7 @@ window.APP_INITIAL_TAB = 'entrada';
                 <tr class="hormiga-total-row">
                     <td colspan="2"><strong>🐜 Total Gastos Hormiga</strong></td>
                     <td class="right"><strong>${Utils.fmtCOP.format(totalHormiga)}</strong></td>
-                    <td class="right">${total > 0 ? ((totalHormiga / total) * 100).toFixed(0) : 0}%</td>
+                    <td class="right">${total > 0 ? ((totalHormiga / total) * 100).toFixed(1) : '0.0'}%</td>
                     <td class="right"></td>
                     <td class="right"></td>
                 </tr>
@@ -296,9 +295,22 @@ window.APP_INITIAL_TAB = 'entrada';
     function refreshMesSelector() {
         const sel = document.getElementById('mesSelector');
         if (!sel) return;
+        const currentIdx = getCurrentMonthIndex();
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const previousIdx = parseInt(sel.value, 10);
         sel.innerHTML = '';
-        state.meses.forEach((mes, idx) => sel.append(new Option(mes.nombre, idx)));
+        state.meses.forEach((mes, idx) => {
+            const isCurrent = mes.monthIdx === currentMonth && mes.year === currentYear;
+            const option = new Option(isCurrent ? `${mes.nombre} 📍` : mes.nombre, idx);
+            if (isCurrent) {
+                option.style.fontWeight = 'bold';
+                option.style.color = '#22c55e';
+            }
+            sel.append(option);
+        });
         sel.disabled = !state.editingEnabled || state.meses.length === 0;
+        sel.value = String(!sel.disabled && Number.isFinite(previousIdx) && previousIdx >= 0 && previousIdx < state.meses.length ? previousIdx : currentIdx);
         updatePrimaVisibility();
         updateMesEditChip();
     }
@@ -311,8 +323,13 @@ window.APP_INITIAL_TAB = 'entrada';
             return;
         }
         const month = state.meses[selectedMonthIdxEntrada()];
+        if (!month) return;
         info.style.display = '';
-        document.getElementById('mesEditChip').textContent = `Editando: ${month.nombre}`;
+        const chip = document.getElementById('mesEditChip');
+        if (!chip) return;
+        const isCurrentMonth = month.monthIdx === new Date().getMonth() && month.year === new Date().getFullYear();
+        chip.textContent = `Editando: ${month.nombre}${isCurrentMonth ? ' 📍 (mes actual)' : ''}`;
+        chip.className = isCurrentMonth ? 'chip ok' : 'chip edit';
     }
 
     function updatePrimaVisibility() {
