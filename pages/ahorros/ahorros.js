@@ -95,18 +95,13 @@ window.APP_INITIAL_TAB = 'ahorros';
         tbody.innerHTML = '';
         if (state.meses.length === 0) return;
 
-        let carryPrev = 0;
         let sumPlan = 0;
         let sumAhorrado = 0;
         let sumAhorradoConfirmado = 0;
         const mesesOrd = [...state.meses].sort((a, b) => (a.year - b.year) || (a.monthIdx - b.monthIdx));
 
         mesesOrd.forEach((mes) => {
-            mes.ahorroValor = Math.round(mes.saldo * ((Math.min(100, Math.max(0, mes.ahorroPct)) || 0) / 100));
-            mes.gastoValor = Math.round(mes.saldo * ((Math.min(100, Math.max(0, mes.gastoPct)) || 0) / 100));
-            const invMes = state.inversiones.filter((inv) => inv.monthId === mes.id).reduce((acc, inv) => acc + inv.valor, 0);
-            mes.disponible = Math.max(0, Math.round(mes.saldo - (mes.ahorroTotal + mes.gastoValor + invMes) + carryPrev));
-            carryPrev = mes.disponible;
+            calcularMes(mes);
             sumPlan += mes.ahorroValor;
             sumAhorrado += mes.ahorroTotal || 0;
             if (mes.ahorroConfirmado) sumAhorradoConfirmado += mes.ahorroTotal || 0;
@@ -136,6 +131,8 @@ window.APP_INITIAL_TAB = 'ahorros';
         tbody.querySelectorAll('.input-pct-ah').forEach((input) => input.addEventListener('change', () => {
             const mes = state.meses.find((item) => item.id === input.dataset.m);
             mes.ahorroPct = Math.round(Math.min(100, Math.max(0, parseFloat(input.value || '0'))));
+            recalcularSaldosMeses();
+            verificarYArrastrarSaldo();
             saveState();
             renderAhorros();
         }));
@@ -143,6 +140,8 @@ window.APP_INITIAL_TAB = 'ahorros';
         tbody.querySelectorAll('.input-pct-g').forEach((input) => input.addEventListener('change', () => {
             const mes = state.meses.find((item) => item.id === input.dataset.m);
             mes.gastoPct = Math.round(Math.min(100, Math.max(0, parseFloat(input.value || '0'))));
+            recalcularSaldosMeses();
+            verificarYArrastrarSaldo();
             saveState();
             renderAhorros();
         }));
@@ -151,6 +150,8 @@ window.APP_INITIAL_TAB = 'ahorros';
             const mes = state.meses.find((item) => item.id === input.dataset.m);
             mes.ahorroTotal = Math.max(0, parseInt(input.value || '0', 10) || 0);
             if (mes.ahorroTotal < mes.ahorroValor) mes.ahorroConfirmado = false;
+            recalcularSaldosMeses();
+            verificarYArrastrarSaldo();
             saveState();
             renderAhorros();
         }));
@@ -159,6 +160,8 @@ window.APP_INITIAL_TAB = 'ahorros';
             const mes = state.meses.find((item) => item.id === event.target.dataset.m);
             mes.ahorroConfirmado = event.target.checked;
             if (event.target.checked && mes.ahorroTotal < mes.ahorroValor) mes.ahorroTotal = mes.ahorroValor;
+            recalcularSaldosMeses();
+            verificarYArrastrarSaldo();
             saveState();
             renderAhorros();
         }));

@@ -64,10 +64,8 @@ window.APP_INITIAL_TAB = 'inversiones';
     function dineroDisponibleActualInv() {
         if (hasMonths()) {
             const month = currentMonthObj();
-            const totalIng = month.ingresos.reduce((acc, item) => acc + item.valor, 0);
-            let totalGas = month.gastos.reduce((acc, item) => acc + (item.valorTotal ?? item.valor ?? 0), 0);
-            totalGas += getTotalGastosHormiga();
-            return Math.max(0, Math.round(totalIng - totalGas - (month.ahorroTotal || 0) - (month.gastoValor || 0) - totalInvertidoMes()));
+            calcularMes(month);
+            return month.restanteCierre;
         }
         return Math.max(0, Math.round(tempIngresos.reduce((acc, item) => acc + item.valor, 0) - tempGastos.reduce((acc, item) => acc + (item.valorTotal || 0), 0) - totalInvertidoMes()));
     }

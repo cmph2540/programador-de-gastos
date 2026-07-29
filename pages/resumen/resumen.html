@@ -54,6 +54,13 @@
     <!-- Resumen -->
     <section id="resumen" class="card" role="region" aria-label="Resumen anual">
       <h3>Resumen mensual (orden Enero a Diciembre por año)</h3>
+      <div class="chart-container" aria-labelledby="restanteChartTitle">
+        <div class="chart-header">
+          <h4 id="restanteChartTitle">Evolución del restante</h4>
+          <span class="chart-total" id="restanteTotal">COP 0</span>
+        </div>
+        <svg id="restanteChart" class="restante-chart" viewBox="0 0 800 300" role="img" aria-label="Evolución del restante mensual"></svg>
+      </div>
       <div class="table-wrap">
         <table id="tablaResumen">
           <thead>

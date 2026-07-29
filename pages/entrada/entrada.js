@@ -78,7 +78,14 @@ window.APP_INITIAL_TAB = 'entrada';
         alertText.textContent = liquidityStatus.message;
     }
 
+    function refreshMonthBalanceAfterChange() {
+        if (!hasEntradaMonths()) return;
+        calcularMes(state.meses[selectedMonthIdxEntrada()]);
+        if (verificarYArrastrarSaldo()) saveState();
+    }
+
     function renderIngresos() {
+        refreshMonthBalanceAfterChange();
         const tbody = document.querySelector('#tablaIngresos tbody');
         if (!tbody) return;
 
@@ -216,6 +223,7 @@ window.APP_INITIAL_TAB = 'entrada';
     }
 
     function renderGastos() {
+        refreshMonthBalanceAfterChange();
         const tbody = document.querySelector('#tablaGastos tbody');
         if (!tbody) return;
 
@@ -586,7 +594,11 @@ window.APP_INITIAL_TAB = 'entrada';
                 ahorroTotal: 0,
                 gastoValor: 0,
                 disponible: 0,
-                ahorroConfirmado: false
+                ahorroConfirmado: false,
+                restanteCierre: 0,
+                restanteAnteriorAplicado: false,
+                saldoInicialMes: 0,
+                mesCerrado: false
             });
         }
     }
@@ -823,6 +835,7 @@ window.APP_INITIAL_TAB = 'entrada';
         document.getElementById('btnGuardarMes').addEventListener('click', () => {
             if (!hasEntradaMonths()) return softToast('Primero crea los 12 meses', 'warn');
             calcularMes(state.meses[selectedMonthIdxEntrada()]);
+            verificarYArrastrarSaldo();
             saveState();
             updateResumenContext();
             softToast('Mes guardado', 'ok');
@@ -859,7 +872,8 @@ window.APP_INITIAL_TAB = 'entrada';
                 state.meses.forEach((mes) => mes.gastos.push({ desc: gasto.desc, tipo: gasto.tipo, valor: gasto.valorTotal, pagado: false }));
             });
 
-            state.meses.forEach((mes) => calcularMes(mes));
+            recalcularSaldosMeses();
+            verificarYArrastrarSaldo();
             state.doceMesesCreados = true;
             saveState();
             refreshMesSelector();

@@ -1505,11 +1505,8 @@ function totalInvertidoMes(){ return getInversionesMes().reduce((a,b)=> a + (b.v
 function dineroDisponibleActual(){
     if(hasMonths()){
         const m = currentMonthObj();
-        const totalIng = m.ingresos.reduce((a,b)=>a+b.valor,0);
-        let totalGas = m.gastos.reduce((a,b)=>a+(b.valorTotal ?? b.valor ?? 0),0);
-        totalGas += getTotalGastosHormiga();
-        const saldo = totalIng - totalGas;
-        return Math.max(0, Math.round(saldo - (m.ahorroTotal || 0) - (m.gastoValor || 0) - totalInvertidoMes()));
+        calcularMes(m);
+        return m.restanteCierre;
     }else{
         const totalIngTemp = tempIngresos.reduce((a,b)=>a+b.valor,0);
         let totalGasTemp = tempGastos.reduce((a,b)=>a+(b.valorTotal||0),0);
@@ -2216,16 +2213,90 @@ function renderInvTop5Chart(){
     });
 }
 
+/* ==== SALDO ENTRE MESES ==== */
+function ensureMonthBalanceFields(mes) {
+    if (!mes) return;
+    mes.saldoInicialMes = Math.max(0, Number(mes.saldoInicialMes) || 0);
+    mes.restanteCierre = Math.max(0, Number(mes.restanteCierre) || 0);
+    mes.restanteAnteriorAplicado = Boolean(mes.restanteAnteriorAplicado);
+    mes.mesCerrado = Boolean(mes.mesCerrado);
+}
+
+function getOrderedMonths() {
+    return [...state.meses].sort((a, b) => (a.year - b.year) || (a.monthIdx - b.monthIdx));
+}
+
+function monthHasFinancialData(mes) {
+    return Boolean(
+        mes && (
+            mes.ingresos?.length ||
+            mes.gastos?.length ||
+            getGastosHormigaMes(getMonthId(mes)).length ||
+            state.inversiones.some((inversion) => inversion.monthId === mes.id) ||
+            mes.ahorroConfirmado
+        )
+    );
+}
+
 /* ==== GUARDADO / MESES ==== */
 function calcularMes(m){
-    const totalIng = m.ingresos.reduce((a,b)=>a+b.valor,0);
-    let totalGas = m.gastos.reduce((a,b)=>a+(b.valorTotal ?? b.valor ?? 0),0);
+    if (!m) return;
+    ensureMonthBalanceFields(m);
+    const totalIng = (m.ingresos || []).reduce((a,b)=>a + (Number(b.valor) || 0), 0);
+    let totalGas = (m.gastos || []).reduce((a,b)=>a + (Number(b.valorTotal ?? b.valor) || 0), 0);
     totalGas += getTotalGastosHormigaMes(getMonthId(m));
-    m.saldo = totalIng - totalGas;
-    m.liqPct = totalIng > 0 ? Math.min(100, (m.saldo / totalIng) * 100) : m.saldo < 0 ? -100 : m.saldo > 0 ? 100 : 0;
+    const inversionesMes = state.inversiones
+        .filter((inversion) => inversion.monthId === m.id)
+        .reduce((total, inversion) => total + (Number(inversion.valor) || 0), 0);
+
+    // El saldo incluye el arrastre ya aplicado. El ahorro solo impacta el
+    // restante cuando la persona lo confirma.
+    m.saldo = Math.round(totalIng - totalGas + m.saldoInicialMes);
+    m.ahorroValor = Math.round(Math.max(0, m.saldo) * ((m.ahorroPct ?? 25) / 100));
+    m.gastoValor = Math.round(Math.max(0, m.saldo) * ((m.gastoPct ?? 35) / 100));
+    const ahorroEfectivo = m.ahorroConfirmado ? Math.max(0, Number(m.ahorroTotal) || 0) : 0;
+    m.restanteCierre = Math.max(0, Math.round(m.saldo - ahorroEfectivo - m.gastoValor - inversionesMes));
+    m.disponible = m.restanteCierre;
+    m.liqPct = m.saldo > 0 ? Math.min(100, Math.max(0, (m.restanteCierre / m.saldo) * 100)) : 0;
     m.expPct = 100 - m.liqPct;
-    m.ahorroValor = Math.round(m.saldo * ((m.ahorroPct ?? 25)/100));
-    m.gastoValor  = Math.round(m.saldo * ((m.gastoPct ?? 35)/100));
+}
+
+function recalcularSaldosMeses() {
+    getOrderedMonths().forEach(calcularMes);
+}
+
+function verificarYArrastrarSaldo({ notify = false } = {}) {
+    const today = new Date();
+    const mesActual = state.meses.find((mes) => mes.monthIdx === today.getMonth() && mes.year === today.getFullYear());
+    if (!mesActual) return false;
+
+    const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const mesAnterior = state.meses.find((mes) => mes.monthIdx === previousDate.getMonth() && mes.year === previousDate.getFullYear());
+    if (!mesAnterior || !monthHasFinancialData(mesAnterior)) return false;
+
+    ensureMonthBalanceFields(mesAnterior);
+    ensureMonthBalanceFields(mesActual);
+    calcularMes(mesAnterior);
+    const siguienteSaldoInicial = Math.max(0, mesAnterior.restanteCierre || 0);
+    const changed = !mesActual.restanteAnteriorAplicado || mesActual.saldoInicialMes !== siguienteSaldoInicial || !mesAnterior.mesCerrado;
+
+    mesActual.saldoInicialMes = siguienteSaldoInicial;
+    mesActual.restanteAnteriorAplicado = true;
+    mesAnterior.mesCerrado = true;
+    calcularMes(mesActual);
+
+    if (changed && notify && siguienteSaldoInicial > 0) {
+        softToast(`Saldo del mes anterior aplicado: ${Utils.fmtCOP.format(siguienteSaldoInicial)}`, 'ok');
+    }
+    return changed;
+}
+
+function checkAndApplyMonthTransition() {
+    state.meses.forEach(ensureMonthBalanceFields);
+    recalcularSaldosMeses();
+    const changed = verificarYArrastrarSaldo({ notify: false });
+    if (changed) saveState();
+    return changed;
 }
 
 function distribuirCuotas(total, n){
@@ -2736,7 +2807,8 @@ function setupEventListeners() {
                     nombre: `${Utils.monthNames[idx]} ${year}`,
                     year, monthIdx: idx, ingresos: [], gastos: [],
                     saldo: 0, liqPct: 0, expPct: 0, prima: false,
-                    ahorroPct: 25, gastoPct: 35, ahorroValor: 0, ahorroTotal: 0, gastoValor: 0, disponible: 0, ahorroConfirmado: false
+                    ahorroPct: 25, gastoPct: 35, ahorroValor: 0, ahorroTotal: 0, gastoValor: 0, disponible: 0, ahorroConfirmado: false,
+                    restanteCierre: 0, restanteAnteriorAplicado: false, saldoInicialMes: 0, mesCerrado: false
                 });
             }
         }
@@ -3236,6 +3308,8 @@ function init(){
     document.getElementById('tipText').textContent = tips[Math.floor(Math.random() * tips.length)];
     
     if (checkAuth()) updateAuthUI();
+
+    checkAndApplyMonthTransition();
     
     if (window.location.search.includes('reset=')) {
         resetPasswordWithToken();

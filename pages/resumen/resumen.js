@@ -1,6 +1,42 @@
 window.APP_INITIAL_TAB = 'resumen';
 
 (window.PageModules = window.PageModules || {}).resumen = (() => {
+    function renderRestanteChart() {
+        const svg = document.getElementById('restanteChart');
+        const total = document.getElementById('restanteTotal');
+        if (!svg || !total) return;
+
+        const meses = getOrderedMonths();
+        const width = 800;
+        const height = 300;
+        const padding = { top: 28, right: 22, bottom: 42, left: 28 };
+        const chartHeight = height - padding.top - padding.bottom;
+        const chartWidth = width - padding.left - padding.right;
+        const max = Math.max(1, ...meses.map((mes) => mes.restanteCierre || 0));
+        const totalRestante = meses.reduce((sum, mes) => sum + (mes.restanteCierre || 0), 0);
+
+        total.textContent = Utils.fmtCOP.format(totalRestante);
+        svg.innerHTML = '<rect width="800" height="300" rx="12" fill="#0b1323" stroke="#1c2940"></rect>';
+        if (!meses.length) {
+            svg.insertAdjacentHTML('beforeend', '<text x="400" y="150" text-anchor="middle" fill="#9fb3c8" font-size="14">Sin datos para mostrar</text>');
+            return;
+        }
+
+        const gap = chartWidth / meses.length;
+        const barWidth = Math.max(10, Math.min(42, gap * .62));
+        meses.forEach((mes, index) => {
+            const restante = Math.max(0, mes.restanteCierre || 0);
+            const barHeight = (restante / max) * chartHeight;
+            const x = padding.left + index * gap + (gap - barWidth) / 2;
+            const y = padding.top + chartHeight - barHeight;
+            const label = (mes.nombre || '').split(' ')[0].slice(0, 3);
+            svg.insertAdjacentHTML('beforeend', `
+                <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${restante > 0 ? '#22c55e' : '#ef4444'}" opacity=".85"><title>${Utils.escapeHTML(mes.nombre)}: ${Utils.escapeHTML(Utils.fmtCOP.format(restante))}</title></rect>
+                <text x="${x + barWidth / 2}" y="${height - 16}" text-anchor="middle" fill="#9fb3c8" font-size="10">${Utils.escapeHTML(label)}</text>
+            `);
+        });
+    }
+
     function renderResumen() {
         const tbody = document.querySelector('#tablaResumen tbody');
         if (!tbody) return;
@@ -33,6 +69,7 @@ window.APP_INITIAL_TAB = 'resumen';
                 </td>
             </tr>
         `).join('');
+        renderRestanteChart();
     }
 
     return {

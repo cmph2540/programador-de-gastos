@@ -1,5 +1,16 @@
 /* Estilos exclusivos de la pagina de resumen. */
 
+ .chart-container { margin: 1rem 0; padding: 1rem; border: 1px solid var(--border, #1c2940); border-radius: 12px; background: linear-gradient(180deg, #0c172a, #0b1425); }
+ .chart-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .5rem; }
+ .chart-header h4 { margin: 0; font-size: .95rem; }
+ .chart-total { color: var(--accent, #4fc3f7); font-weight: 700; }
+ .restante-chart { display: block; width: 100%; height: auto; max-height: 280px; }
+
+@media (max-width: 768px) {
+  .chart-container { padding: .5rem; }
+  .restante-chart { max-height: 210px; }
+}
+
 /* Estilos base para la tabla */
 #tablaResumen th { white-space: nowrap; }
 #tablaResumen td { vertical-align: top; }
