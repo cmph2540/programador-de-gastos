@@ -2220,6 +2220,24 @@ function ensureMonthBalanceFields(mes) {
     mes.restanteCierre = Math.max(0, Number(mes.restanteCierre) || 0);
     mes.restanteAnteriorAplicado = Boolean(mes.restanteAnteriorAplicado);
     mes.mesCerrado = Boolean(mes.mesCerrado);
+    mes.saldoEfectivo = Math.max(0, Number(mes.saldoEfectivo) || 0);
+    mes.saldoCuentas = Math.max(0, Number(mes.saldoCuentas) || 0);
+    mes.saldoDistribucionConfigurada = Boolean(mes.saldoDistribucionConfigurada);
+}
+
+function syncMonthCashDistribution(mes) {
+    ensureMonthBalanceFields(mes);
+    if (!mes.saldoDistribucionConfigurada) return;
+
+    const totalAnterior = mes.saldoEfectivo + mes.saldoCuentas;
+    const totalActual = Math.max(0, mes.saldo || 0);
+    if (totalAnterior <= 0) {
+        mes.saldoEfectivo = 0;
+        mes.saldoCuentas = totalActual;
+        return;
+    }
+    mes.saldoEfectivo = Math.round(totalActual * (mes.saldoEfectivo / totalAnterior));
+    mes.saldoCuentas = totalActual - mes.saldoEfectivo;
 }
 
 function getOrderedMonths() {
@@ -2252,6 +2270,7 @@ function calcularMes(m){
     // El saldo incluye el arrastre ya aplicado. El ahorro solo impacta el
     // restante cuando la persona lo confirma.
     m.saldo = Math.round(totalIng - totalGas + m.saldoInicialMes);
+    syncMonthCashDistribution(m);
     m.ahorroValor = Math.round(Math.max(0, m.saldo) * ((m.ahorroPct ?? 25) / 100));
     m.gastoValor = Math.round(Math.max(0, m.saldo) * ((m.gastoPct ?? 35) / 100));
     const ahorroEfectivo = m.ahorroConfirmado ? Math.max(0, Number(m.ahorroTotal) || 0) : 0;
@@ -2808,7 +2827,8 @@ function setupEventListeners() {
                     year, monthIdx: idx, ingresos: [], gastos: [],
                     saldo: 0, liqPct: 0, expPct: 0, prima: false,
                     ahorroPct: 25, gastoPct: 35, ahorroValor: 0, ahorroTotal: 0, gastoValor: 0, disponible: 0, ahorroConfirmado: false,
-                    restanteCierre: 0, restanteAnteriorAplicado: false, saldoInicialMes: 0, mesCerrado: false
+                    restanteCierre: 0, restanteAnteriorAplicado: false, saldoInicialMes: 0, mesCerrado: false,
+                    saldoEfectivo: 0, saldoCuentas: 0, saldoDistribucionConfigurada: false
                 });
             }
         }

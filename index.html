@@ -101,9 +101,13 @@
         <div class="row">
           <div class="field">
             <label>Saldo = Ingresos – Gastos</label>
-            <div id="saldoChip" class="chip ok">
-              <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#22c55e" stroke-width="2"/></svg>
-              <span id="saldoTexto">COP 0</span>
+            <div class="saldo-chip-wrap">
+              <div id="saldoChip" class="chip ok saldo-chip-editable" role="button" tabindex="0" aria-describedby="saldoBreakdownTooltip" title="Ver y editar desglose de saldo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#22c55e" stroke-width="2"/></svg>
+                <span id="saldoTexto">COP 0</span>
+                <span id="saldoDistribucionIndicador" class="saldo-distribucion-indicador" hidden aria-label="Desglose configurado">÷</span>
+              </div>
+              <div id="saldoBreakdownTooltip" class="saldo-breakdown-tooltip" role="tooltip"></div>
             </div>
           </div>
           <div class="field">
@@ -295,6 +299,27 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <div id="saldoDistributionModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="saldoDistributionTitle">
+    <div class="modal-content saldo-distribution-modal">
+      <div class="modal-header">
+        <div class="modal-title" id="saldoDistributionTitle">Desglose de saldo</div>
+        <button class="modal-close" id="btnCloseSaldoDistribution" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted">Distribuye el saldo disponible entre efectivo y cuentas. Al cambiar un valor, el otro se ajusta automáticamente.</p>
+        <div class="saldo-distribution-total">Total: <strong id="saldoDistributionTotal">COP 0</strong></div>
+        <div class="row">
+          <div class="field"><label for="saldoEfectivoInput">💰 Efectivo</label><input id="saldoEfectivoInput" class="input currency-input" type="text" inputmode="numeric" placeholder="0" autocomplete="off" /></div>
+          <div class="field"><label for="saldoCuentasInput">🏦 Cuentas</label><input id="saldoCuentasInput" class="input currency-input" type="text" inputmode="numeric" placeholder="0" autocomplete="off" /></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnCancelSaldoDistribution" class="btn secondary">Cancelar</button>
+        <button id="btnSaveSaldoDistribution" class="btn primary">Guardar distribución</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL DE LOGIN CORREGIDO -->

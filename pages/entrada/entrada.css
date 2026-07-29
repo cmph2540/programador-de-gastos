@@ -23,6 +23,17 @@
 .alert.liquidity-critical { border-width: 2px; box-shadow: 0 0 18px rgba(245, 158, 11, 0.4); animation: liquidity-alert-pulse 1.8s ease-in-out infinite; }
 .alert.liquidity-negative { border-width: 2px; background: linear-gradient(180deg, #4a151b, #321016); color: #ffd0d0; box-shadow: 0 0 24px rgba(239, 68, 68, 0.7); animation: liquidity-alert-pulse 1.1s ease-in-out infinite; }
 
+.saldo-chip-wrap { position: relative; display: inline-block; }
+.saldo-chip-editable { cursor: pointer; }
+.saldo-chip-editable:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.saldo-distribucion-indicador { margin-left: .2rem; font-weight: 800; color: var(--accent); }
+.saldo-breakdown-tooltip { display: none; position: absolute; z-index: 20; top: calc(100% + .45rem); left: 0; min-width: 190px; padding: .65rem .75rem; border: 1px solid var(--border); border-radius: 10px; background: #0c172a; box-shadow: 0 8px 22px rgba(0,0,0,.35); font-size: .82rem; }
+.saldo-chip-wrap:hover .saldo-breakdown-tooltip, .saldo-chip-wrap:focus-within .saldo-breakdown-tooltip { display: block; }
+.saldo-breakdown-tooltip div { display: flex; justify-content: space-between; gap: 1rem; padding: .12rem 0; }
+.saldo-breakdown-tooltip .muted { margin-top: .3rem; font-size: .75rem; }
+.saldo-distribution-total { margin: .7rem 0; padding: .55rem .7rem; border-radius: 8px; background: rgba(79,195,247,.1); }
+.saldo-distribution-modal { max-width: 540px; }
+
 @keyframes liquidity-alert-pulse {
   50% { transform: scale(1.01); box-shadow: 0 0 30px rgba(239, 68, 68, 0.85); }
 }

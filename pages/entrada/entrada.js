@@ -45,7 +45,9 @@ window.APP_INITIAL_TAB = 'entrada';
         const totalIng = ingresos.reduce((acc, item) => acc + item.valor, 0);
         let totalGas = gastos.reduce((acc, item) => acc + (item.valorTotal ?? item.valor), 0);
         totalGas += getTotalGastosHormiga();
-        const saldo = totalIng - totalGas;
+        const mes = hasEntradaMonths() ? state.meses[selectedMonthIdxEntrada()] : null;
+        if (mes) calcularMes(mes);
+        const saldo = mes ? mes.saldo : totalIng - totalGas;
 
         const chip = document.getElementById('saldoChip');
         if (!chip) return;
@@ -54,8 +56,9 @@ window.APP_INITIAL_TAB = 'entrada';
         if (saldo < 0) chipClass = 'danger';
         else if (saldo === 0 || saldo < totalIng * 0.1) chipClass = 'warn';
 
-        chip.className = `chip ${chipClass}`;
+        chip.className = `chip ${chipClass} saldo-chip-editable`;
         document.getElementById('saldoTexto').textContent = Utils.fmtCOP.format(saldo);
+        renderSaldoDistribution(mes, saldo);
 
         const liq = totalIng > 0 ? Math.min(100, (saldo / totalIng) * 100) : saldo < 0 ? -100 : saldo > 0 ? 100 : 0;
         const exp = 100 - liq;
@@ -76,6 +79,91 @@ window.APP_INITIAL_TAB = 'entrada';
         alertEl.style.display = '';
         alertEl.className = liquidityStatus.className;
         alertText.textContent = liquidityStatus.message;
+    }
+
+    function renderSaldoDistribution(mes, saldo) {
+        const tooltip = document.getElementById('saldoBreakdownTooltip');
+        const indicator = document.getElementById('saldoDistribucionIndicador');
+        if (!tooltip || !indicator) return;
+
+        if (!mes || !mes.saldoDistribucionConfigurada) {
+            indicator.hidden = true;
+            tooltip.innerHTML = '<div class="muted">Haz clic para distribuir este saldo entre efectivo y cuentas.</div>';
+            return;
+        }
+
+        indicator.hidden = false;
+        tooltip.innerHTML = `
+            <div><span>💰 Efectivo</span><strong>${Utils.fmtCOP.format(mes.saldoEfectivo)}</strong></div>
+            <div><span>🏦 Cuentas</span><strong>${Utils.fmtCOP.format(mes.saldoCuentas)}</strong></div>
+            <div><span>Total</span><strong>${Utils.fmtCOP.format(Math.max(0, saldo))}</strong></div>
+            <div class="muted">Haz clic para editar</div>
+        `;
+    }
+
+    function getSaldoDistributionMonth() {
+        return hasEntradaMonths() ? state.meses[selectedMonthIdxEntrada()] : null;
+    }
+
+    function parseDistributionValue(input) {
+        return Math.max(0, Number(Utils.parseCurrency(input.value)) || 0);
+    }
+
+    function openSaldoDistributionModal() {
+        const mes = getSaldoDistributionMonth();
+        if (!mes) return softToast('Crea los meses para guardar el desglose de saldo', 'warn');
+        calcularMes(mes);
+        ensureMonthBalanceFields(mes);
+        const total = Math.max(0, mes.saldo);
+        const efectivo = mes.saldoDistribucionConfigurada ? mes.saldoEfectivo : 0;
+        const cuentas = mes.saldoDistribucionConfigurada ? mes.saldoCuentas : total;
+
+        document.getElementById('saldoEfectivoInput').value = efectivo ? Utils.formatNumber(efectivo) : '';
+        document.getElementById('saldoCuentasInput').value = cuentas ? Utils.formatNumber(cuentas) : '';
+        document.getElementById('saldoDistributionTotal').textContent = Utils.fmtCOP.format(total);
+        document.getElementById('saldoDistributionModal').style.display = 'flex';
+    }
+
+    function closeSaldoDistributionModal() {
+        document.getElementById('saldoDistributionModal').style.display = 'none';
+    }
+
+    function updateDistributionCounterpart(source) {
+        const mes = getSaldoDistributionMonth();
+        if (!mes) return;
+        calcularMes(mes);
+        const total = Math.max(0, mes.saldo);
+        const efectivoInput = document.getElementById('saldoEfectivoInput');
+        const cuentasInput = document.getElementById('saldoCuentasInput');
+        let efectivo = parseDistributionValue(efectivoInput);
+        let cuentas = parseDistributionValue(cuentasInput);
+
+        if (source === 'efectivo') {
+            efectivo = Math.min(total, efectivo);
+            cuentas = total - efectivo;
+            efectivoInput.value = efectivo ? Utils.formatNumber(efectivo) : '';
+            cuentasInput.value = cuentas ? Utils.formatNumber(cuentas) : '';
+        } else {
+            cuentas = Math.min(total, cuentas);
+            efectivo = total - cuentas;
+            efectivoInput.value = efectivo ? Utils.formatNumber(efectivo) : '';
+            cuentasInput.value = cuentas ? Utils.formatNumber(cuentas) : '';
+        }
+    }
+
+    function saveSaldoDistribution() {
+        const mes = getSaldoDistributionMonth();
+        if (!mes) return;
+        calcularMes(mes);
+        const total = Math.max(0, mes.saldo);
+        const efectivo = Math.min(total, parseDistributionValue(document.getElementById('saldoEfectivoInput')));
+        mes.saldoEfectivo = efectivo;
+        mes.saldoCuentas = total - efectivo;
+        mes.saldoDistribucionConfigurada = true;
+        saveState();
+        closeSaldoDistributionModal();
+        updateResumenContext();
+        softToast('Desglose de saldo guardado', 'ok');
     }
 
     function refreshMonthBalanceAfterChange() {
@@ -598,7 +686,10 @@ window.APP_INITIAL_TAB = 'entrada';
                 restanteCierre: 0,
                 restanteAnteriorAplicado: false,
                 saldoInicialMes: 0,
-                mesCerrado: false
+                mesCerrado: false,
+                saldoEfectivo: 0,
+                saldoCuentas: 0,
+                saldoDistribucionConfigurada: false
             });
         }
     }
@@ -631,6 +722,20 @@ window.APP_INITIAL_TAB = 'entrada';
     }
 
     function setupListeners() {
+        const saldoChip = document.getElementById('saldoChip');
+        saldoChip.addEventListener('click', openSaldoDistributionModal);
+        saldoChip.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openSaldoDistributionModal();
+            }
+        });
+        document.getElementById('btnCloseSaldoDistribution').addEventListener('click', closeSaldoDistributionModal);
+        document.getElementById('btnCancelSaldoDistribution').addEventListener('click', closeSaldoDistributionModal);
+        document.getElementById('btnSaveSaldoDistribution').addEventListener('click', saveSaldoDistribution);
+        document.getElementById('saldoEfectivoInput').addEventListener('input', () => updateDistributionCounterpart('efectivo'));
+        document.getElementById('saldoCuentasInput').addEventListener('input', () => updateDistributionCounterpart('cuentas'));
+
         document.getElementById('chkGastoCuotas').addEventListener('change', (event) => {
             document.getElementById('gastoCuotas').disabled = !event.target.checked;
         });
