@@ -290,7 +290,7 @@ let state = {
     bankGoalPct: 100,
     editingEnabled: false,
     doceMesesCreados: false,
-    gastosHormiga: [],
+    gastosHormiga: {},
     users: [],
     recoveryTokens: [],
     adminSecurityPhrases: {},
@@ -345,7 +345,7 @@ function loadState(){
         state.bankGoalPct = typeof loaded.bankGoalPct === 'number' ? loaded.bankGoalPct : 100;
         state.editingEnabled = !!loaded.editingEnabled;
         state.doceMesesCreados = !!loaded.doceMesesCreados;
-        state.gastosHormiga = Array.isArray(loaded.gastosHormiga) ? loaded.gastosHormiga : [];
+        state.gastosHormiga = loaded.gastosHormiga ?? {};
         state.users = Array.isArray(loaded.users) ? loaded.users : [];
         state.adminSecurityPhrases = loaded.adminSecurityPhrases || {};
         state.sessionExpiry = loaded.sessionExpiry || null;
@@ -889,27 +889,93 @@ function setupLoginTabs() {
 }
 
 /* ==== GASTOS HORMIGA ==== */
-function getTotalGastosHormiga() {
-    return state.gastosHormiga.reduce((sum, gh) => {
-        // Asegurar que gh.valor es un número válido, no un string o email
+function getMonthId(month) {
+    const source = month || currentMonthObj();
+    if (source && Number.isFinite(source.year) && Number.isFinite(source.monthIdx)) {
+        return `${source.year}-${String(source.monthIdx + 1).padStart(2, '0')}`;
+    }
+    const today = Utils.hoyLocal();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getCurrentMonthId() {
+    return getMonthId();
+}
+
+function migrarGastosHormiga() {
+    if (!Array.isArray(state.gastosHormiga)) return false;
+
+    // El formato anterior no tenía mes; se conserva todo en el mes que se está usando ahora.
+    const tieneGastos = state.gastosHormiga.length > 0;
+    state.gastosHormiga = {
+        [getCurrentMonthId()]: state.gastosHormiga.map((gasto, index) => ({
+            ...gasto,
+            id: gasto.id || `gh_migrated_${Date.now()}_${index}`
+        }))
+    };
+    state.meses.forEach((mes) => calcularMes(mes));
+    saveState();
+    return tieneGastos;
+}
+
+function getGastosHormigaMes(monthId = getCurrentMonthId()) {
+    if (!state.gastosHormiga || Array.isArray(state.gastosHormiga)) return [];
+    return Array.isArray(state.gastosHormiga[monthId]) ? state.gastosHormiga[monthId] : [];
+}
+
+function getTotalGastosHormigaMes(monthId = getCurrentMonthId()) {
+    return getGastosHormigaMes(monthId).reduce((sum, gh) => {
         const valor = Number(gh.valor) || 0;
         return isFinite(valor) ? sum + valor : sum;
     }, 0);
 }
 
-function renderGastosHormigaTooltip() {
+function getTotalGastosHormiga(monthId = getCurrentMonthId()) {
+    return getTotalGastosHormigaMes(monthId);
+}
+
+function addGastoHormiga(concepto, valor, fecha, monthId = getCurrentMonthId()) {
+    if (!state.gastosHormiga || Array.isArray(state.gastosHormiga)) state.gastosHormiga = {};
+    if (!state.gastosHormiga[monthId]) state.gastosHormiga[monthId] = [];
+    state.gastosHormiga[monthId].push({
+        id: `gh_${Date.now()}`,
+        concepto,
+        valor,
+        fecha: fecha || Utils.fmtYYYYMMDD(Utils.hoyLocal()),
+        createdAt: new Date().toISOString()
+    });
+}
+
+function updateGastoHormiga(index, data, monthId = getCurrentMonthId()) {
+    const gastos = getGastosHormigaMes(monthId);
+    if (!gastos[index]) return false;
+    gastos[index] = { ...gastos[index], ...data };
+    return true;
+}
+
+function removeGastoHormiga(index, monthId = getCurrentMonthId()) {
+    const gastos = getGastosHormigaMes(monthId);
+    if (!gastos[index]) return false;
+    gastos.splice(index, 1);
+    return true;
+}
+
+const gastosHormigaMigrados = migrarGastosHormiga();
+
+function renderGastosHormigaTooltip(monthId = getCurrentMonthId()) {
     const content = document.getElementById('hormigaTooltipContent');
     if (!content) return;
     
-    const total = getTotalGastosHormiga();
+    const gastos = getGastosHormigaMes(monthId);
+    const total = getTotalGastosHormigaMes(monthId);
     
-    if (state.gastosHormiga.length === 0) {
+    if (gastos.length === 0) {
         content.innerHTML = '<div class="hormiga-empty">No hay gastos hormiga</div>';
         return;
     }
     
     let html = '<div class="hormiga-tooltip-list">';
-    state.gastosHormiga.forEach(gh => {
+    gastos.forEach(gh => {
         html += `<div class="hormiga-tooltip-item">
             <span class="hormiga-concepto">${Utils.escapeHTML(gh.concepto)}</span>
             <span class="hormiga-valor">${Utils.fmtCOP.format(gh.valor)}</span>
@@ -948,21 +1014,30 @@ function closeHormigaModal() {
     hideHormigaForm();
 }
 
-function renderHormigaModalList() {
+function renderHormigaWidget(monthId = getCurrentMonthId()) {
+    const preview = document.getElementById('hormigaTotalPreview');
+    if (preview) preview.textContent = Utils.fmtCOP.format(getTotalGastosHormigaMes(monthId));
+}
+
+function renderHormigaModalList(monthId = getCurrentMonthId()) {
     const container = document.getElementById('hormigaListContainer');
     if (!container) return;
     
-    const total = getTotalGastosHormiga();
+    const gastos = getGastosHormigaMes(monthId);
+    const total = getTotalGastosHormigaMes(monthId);
+    const mesNombre = state.meses.find((mes) => getMonthId(mes) === monthId)?.nombre || 'Mes actual';
+    const modalTitle = document.querySelector('#hormigaModal .modal-title');
+    if (modalTitle) modalTitle.textContent = `\uD83D\uDC1C Gastos Hormiga - ${mesNombre}`;
     document.getElementById('hormigaTotalDisplay').textContent = Utils.fmtCOP.format(total);
     document.getElementById('hormigaTotalPreview').textContent = Utils.fmtCOP.format(total);
     
-    if (state.gastosHormiga.length === 0) {
+    if (gastos.length === 0) {
         container.innerHTML = '<div class="hormiga-empty-state">No hay gastos hormiga.<br>Haz clic en "Agregar" para comenzar.</div>';
         return;
     }
     
     let html = '<div class="hormiga-list">';
-    state.gastosHormiga.forEach((gh, idx) => {
+    gastos.forEach((gh, idx) => {
         html += `
             <div class="hormiga-list-item">
                 <div class="hormiga-item-info">
@@ -979,6 +1054,13 @@ function renderHormigaModalList() {
     });
     html += '</div>';
     container.innerHTML = html;
+}
+
+function sincronizarTotalesHormiga(monthId = getCurrentMonthId()) {
+    renderHormigaWidget(monthId);
+    renderGastosHormigaTooltip(monthId);
+    const modal = document.getElementById('hormigaModal');
+    if (modal?.style.display === 'flex') renderHormigaModalList(monthId);
 }
 
 function showAddHormigaForm() {
@@ -1013,14 +1095,14 @@ function saveGastoHormiga() {
     
     const formattedFecha = fecha ? fecha.split('-').reverse().join('/') : Utils.fmtYYYYMMDD(Utils.hoyLocal());
     
-    if (editIndex >= 0 && editIndex < state.gastosHormiga.length) {
-        state.gastosHormiga[editIndex] = { concepto, valor, fecha: formattedFecha };
+    if (editIndex >= 0 && updateGastoHormiga(editIndex, { concepto, valor, fecha: formattedFecha })) {
         softToast('Gasto hormiga actualizado', 'ok');
     } else {
-        state.gastosHormiga.push({ concepto, valor, fecha: formattedFecha, createdAt: new Date().toISOString() });
+        addGastoHormiga(concepto, valor, formattedFecha);
         softToast('Gasto hormiga agregado', 'ok');
     }
     
+    if (hasMonths()) calcularMes(currentMonthObj());
     saveState();
     renderHormigaModalList();
     hideHormigaForm();
@@ -1029,7 +1111,7 @@ function saveGastoHormiga() {
 }
 
 function editGastoHormiga(idx) {
-    const gh = state.gastosHormiga[idx];
+    const gh = getGastosHormigaMes()[idx];
     if (!gh) return;
     
     document.getElementById('hormigaFormTitle').textContent = 'Editar Gasto Hormiga';
@@ -1041,8 +1123,8 @@ function editGastoHormiga(idx) {
     document.getElementById('hormigaFormContainer').style.display = 'block';
 }
 
-function deleteGastoHormiga(idx) {
-    const gh = state.gastosHormiga[idx];
+function deleteGastoHormiga(idx, monthId = getCurrentMonthId()) {
+    const gh = getGastosHormigaMes(monthId)[idx];
     if (!gh) return;
     
     ConfirmModal.show(
@@ -1051,7 +1133,8 @@ function deleteGastoHormiga(idx) {
         {
             okText: 'Eliminar',
             callback: () => {
-                state.gastosHormiga.splice(idx, 1);
+                removeGastoHormiga(idx, monthId);
+                if (hasMonths() && monthId === getCurrentMonthId()) calcularMes(currentMonthObj());
                 saveState();
                 renderHormigaModalList();
                 renderGastos();
@@ -1136,19 +1219,79 @@ function adminAssignRole(email) {
     softToast(`${email} ahora es administrador`, 'ok');
 }
 
-/* ==== FORMATEO DE MONEDA ==== */
+/* ==== CAMPOS NUMÉRICOS ==== */
+const VALUE_INPUT_IDS = ['ingresoValor', 'gastoValor', 'gastoCuotas', 'invValor', 'invRentMensual', 'hormigaValor'];
+
+function preventValueAutocomplete(input) {
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('data-lpignore', 'true');
+    input.setAttribute('x-autocompletetype', 'off');
+    input.setAttribute('spellcheck', 'false');
+}
+
+function formatCurrencyInput(input) {
+    // Los valores monetarios en COP son enteros. Eliminar todo lo que no sea
+    // un dígito evita que un correo o cualquier texto del autocompletado quede visible.
+    if (/[^0-9.]/.test(input.value)) {
+        input.value = '';
+        return;
+    }
+    const digits = input.value.replace(/\D/g, '');
+    input.value = digits ? Utils.formatNumber(Number(digits)) : '';
+}
+
+function sanitizeNumberInput(input) {
+    // type="number" ya impide texto en la mayoría de navegadores; esta capa
+    // adicional también protege pegados y autocompletados no válidos.
+    const allowsDecimal = input.step && input.step !== '1';
+    const allowsNegative = Number(input.min) < 0;
+    let value = input.value.replace(allowsDecimal ? /[^0-9.-]/g : /[^0-9-]/g, '');
+    const negative = allowsNegative && value.startsWith('-') ? '-' : '';
+    value = value.replace(/-/g, '');
+
+    if (allowsDecimal) {
+        const [integer = '', ...decimals] = value.split('.');
+        value = `${negative}${integer}${decimals.length ? `.${decimals.join('')}` : ''}`;
+    } else {
+        value = `${negative}${value}`;
+    }
+    input.value = value;
+}
+
 function setupCurrencyInputs() {
-    const currencyInputs = document.querySelectorAll('.currency-input');
-    currencyInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            const rawValue = this.value.replace(/\./g, '');
-            const numericValue = parseInt(rawValue, 10);
-            if (!isNaN(numericValue)) {
-                this.value = Utils.formatNumber(numericValue);
-            } else if (this.value === '') {
-                this.value = '';
-            }
+    const valueInputs = document.querySelectorAll('.currency-input, .input[type="number"]');
+    valueInputs.forEach((input) => {
+        preventValueAutocomplete(input);
+        if (input.dataset.numericValidationReady === 'true') return;
+
+        input.dataset.numericValidationReady = 'true';
+        input.addEventListener('input', () => {
+            if (input.classList.contains('currency-input')) formatCurrencyInput(input);
+            else sanitizeNumberInput(input);
         });
+    });
+}
+
+function clearInitialValueInputs() {
+    VALUE_INPUT_IDS.forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.value = '';
+        preventValueAutocomplete(input);
+    });
+}
+
+function clearInvalidInitialValueInputs() {
+    VALUE_INPUT_IDS.forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input || !input.value) return;
+
+        const isCurrency = input.classList.contains('currency-input');
+        const numericPattern = input.type === 'number' ? /^-?\d*(\.\d*)?$/ : /^[\d.]*$/;
+        if (!numericPattern.test(input.value)) {
+            input.value = '';
+            input.placeholder = input.placeholder || (isCurrency ? '0' : '');
+        }
     });
 }
 
@@ -1479,6 +1622,7 @@ function renderGastos(){
     }
     
     document.getElementById('totalGastos').textContent = Utils.fmtCOP.format(total);
+    renderHormigaWidget();
     renderPagoDonut();
     renderCategoriaDonut();
     updateResumenContext();
@@ -2075,8 +2219,8 @@ function renderInvTop5Chart(){
 /* ==== GUARDADO / MESES ==== */
 function calcularMes(m){
     const totalIng = m.ingresos.reduce((a,b)=>a+b.valor,0);
-    let totalGas = m.gastos.reduce((a,b)=>a+(b.valor ?? b.valorTotal ?? 0),0);
-    totalGas += getTotalGastosHormiga();
+    let totalGas = m.gastos.reduce((a,b)=>a+(b.valorTotal ?? b.valor ?? 0),0);
+    totalGas += getTotalGastosHormigaMes(getMonthId(m));
     m.saldo = totalIng - totalGas;
     m.liqPct = totalIng > 0 ? Math.min(100, (m.saldo / totalIng) * 100) : m.saldo < 0 ? -100 : m.saldo > 0 ? 100 : 0;
     m.expPct = 100 - m.liqPct;
@@ -3072,6 +3216,11 @@ function init(){
     applyCurrentPageVisibility(initialTab);
     setupSharedEventListeners();
     setupCurrencyInputs();
+    clearInitialValueInputs();
+    clearInvalidInitialValueInputs();
+    window.setTimeout(clearInvalidInitialValueInputs, 100);
+    window.setTimeout(clearInvalidInitialValueInputs, 500);
+    window.addEventListener('load', clearInvalidInitialValueInputs, { once: true });
     setupLoginTabs();
     setupManualLoginEvents();
     ensureMainAdminExists();
@@ -3093,6 +3242,7 @@ function init(){
     }
 
     getCurrentPageModule()?.init?.();
+    if (gastosHormigaMigrados) softToast('📦 Gastos hormiga migrados al mes actual', 'info');
     OnboardingTour.init();
     window.setTimeout(() => OnboardingTour.start(), 500);
 }

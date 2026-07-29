@@ -269,6 +269,7 @@ window.APP_INITIAL_TAB = 'entrada';
         }
 
         document.getElementById('totalGastos').textContent = Utils.fmtCOP.format(total);
+        renderHormigaWidget();
         renderPagoDonut();
         renderCategoriaDonut();
         updateResumenContext();
@@ -394,17 +395,18 @@ window.APP_INITIAL_TAB = 'entrada';
         });
     }
 
-    function renderGastosHormigaTooltip() {
+    function renderGastosHormigaTooltip(monthId = getCurrentMonthId()) {
         const content = document.getElementById('hormigaTooltipContent');
         if (!content) return;
-        if (state.gastosHormiga.length === 0) {
+        const gastos = getGastosHormigaMes(monthId);
+        if (gastos.length === 0) {
             content.innerHTML = '<div class="hormiga-empty">No hay gastos hormiga</div>';
             return;
         }
-        const total = getTotalGastosHormiga();
+        const total = getTotalGastosHormigaMes(monthId);
         content.innerHTML = `
             <div class="hormiga-tooltip-list">
-                ${state.gastosHormiga.map((item) => `
+                ${gastos.map((item) => `
                     <div class="hormiga-tooltip-item">
                         <span class="hormiga-concepto">${Utils.escapeHTML(item.concepto)}</span>
                         <span class="hormiga-valor">${Utils.fmtCOP.format(item.valor)}</span>
@@ -432,21 +434,30 @@ window.APP_INITIAL_TAB = 'entrada';
         if (form) form.style.display = 'none';
     }
 
-    function renderHormigaModalList() {
+    function renderHormigaWidget(monthId = getCurrentMonthId()) {
+        const preview = document.getElementById('hormigaTotalPreview');
+        if (preview) preview.textContent = Utils.fmtCOP.format(getTotalGastosHormigaMes(monthId));
+    }
+
+    function renderHormigaModalList(monthId = getCurrentMonthId()) {
         const container = document.getElementById('hormigaListContainer');
         if (!container) return;
-        const total = getTotalGastosHormiga();
+        const gastos = getGastosHormigaMes(monthId);
+        const total = getTotalGastosHormigaMes(monthId);
+        const mesNombre = state.meses.find((mes) => getMonthId(mes) === monthId)?.nombre || 'Mes actual';
+        const modalTitle = document.querySelector('#hormigaModal .modal-title');
+        if (modalTitle) modalTitle.textContent = `\uD83D\uDC1C Gastos Hormiga - ${mesNombre}`;
         document.getElementById('hormigaTotalDisplay').textContent = Utils.fmtCOP.format(total);
         document.getElementById('hormigaTotalPreview').textContent = Utils.fmtCOP.format(total);
 
-        if (state.gastosHormiga.length === 0) {
+        if (gastos.length === 0) {
             container.innerHTML = '<div class="hormiga-empty-state">No hay gastos hormiga.<br>Haz clic en "Agregar" para comenzar.</div>';
             return;
         }
 
         container.innerHTML = `
             <div class="hormiga-list">
-                ${state.gastosHormiga.map((item, idx) => `
+                ${gastos.map((item, idx) => `
                     <div class="hormiga-list-item">
                         <div class="hormiga-item-info">
                             <div class="hormiga-item-concepto">${Utils.escapeHTML(item.concepto)}</div>
@@ -461,6 +472,13 @@ window.APP_INITIAL_TAB = 'entrada';
                 `).join('')}
             </div>
         `;
+    }
+
+    function sincronizarTotalesHormiga(monthId = getCurrentMonthId()) {
+        renderHormigaWidget(monthId);
+        renderGastosHormigaTooltip(monthId);
+        const modal = document.getElementById('hormigaModal');
+        if (modal?.style.display === 'flex') renderHormigaModalList(monthId);
     }
 
     function openHormigaModal() {
@@ -495,14 +513,14 @@ window.APP_INITIAL_TAB = 'entrada';
         if (!isFinite(valor) || valor <= 0) return softToast('Ingresa un valor válido', 'warn');
 
         const formattedFecha = fecha ? fecha.split('-').reverse().join('/') : Utils.fmtYYYYMMDD(Utils.hoyLocal());
-        if (editIndex >= 0 && editIndex < state.gastosHormiga.length) {
-            state.gastosHormiga[editIndex] = { concepto, valor, fecha: formattedFecha };
+        if (editIndex >= 0 && updateGastoHormiga(editIndex, { concepto, valor, fecha: formattedFecha })) {
             softToast('Gasto hormiga actualizado', 'ok');
         } else {
-            state.gastosHormiga.push({ concepto, valor, fecha: formattedFecha, createdAt: new Date().toISOString() });
+            addGastoHormiga(concepto, valor, formattedFecha);
             softToast('Gasto hormiga agregado', 'ok');
         }
 
+        if (hasMonths()) calcularMes(currentMonthObj());
         saveState();
         renderHormigaModalList();
         hideHormigaForm();
@@ -510,7 +528,7 @@ window.APP_INITIAL_TAB = 'entrada';
     }
 
     function editGastoHormiga(idx) {
-        const item = state.gastosHormiga[idx];
+        const item = getGastosHormigaMes()[idx];
         if (!item) return;
         document.getElementById('hormigaFormTitle').textContent = 'Editar Gasto Hormiga';
         document.getElementById('hormigaEditIndex').value = idx;
@@ -520,8 +538,8 @@ window.APP_INITIAL_TAB = 'entrada';
         document.getElementById('hormigaFormContainer').style.display = 'block';
     }
 
-    function deleteGastoHormiga(idx) {
-        const item = state.gastosHormiga[idx];
+    function deleteGastoHormiga(idx, monthId = getCurrentMonthId()) {
+        const item = getGastosHormigaMes(monthId)[idx];
         if (!item) return;
         
         ConfirmModal.show(
@@ -530,7 +548,8 @@ window.APP_INITIAL_TAB = 'entrada';
             {
                 okText: 'Eliminar',
                 callback: () => {
-                    state.gastosHormiga.splice(idx, 1);
+                    removeGastoHormiga(idx, monthId);
+                    if (hasMonths() && monthId === getCurrentMonthId()) calcularMes(currentMonthObj());
                     saveState();
                     renderHormigaModalList();
                     renderGastos();
@@ -570,6 +589,33 @@ window.APP_INITIAL_TAB = 'entrada';
                 ahorroConfirmado: false
             });
         }
+    }
+
+    // El navegador puede restaurar/autocompletar campos después de que app.js
+    // termina su inicialización. Solo se limpia texto inválido: nunca se borra
+    // un valor numérico escrito por la persona usuaria.
+    function initGastoValorField() {
+        const input = document.getElementById('gastoValor');
+        if (!input) return;
+
+        const ensureSafeValue = () => {
+            if (/[^0-9.]/.test(input.value)) {
+                input.value = '';
+                input.placeholder = '0';
+            }
+        };
+
+        input.value = '';
+        input.placeholder = '0';
+        preventValueAutocomplete(input);
+        input.addEventListener('input', ensureSafeValue);
+        input.addEventListener('blur', ensureSafeValue);
+        input.addEventListener('focus', () => window.setTimeout(ensureSafeValue, 0));
+
+        ensureSafeValue();
+        window.setTimeout(ensureSafeValue, 100);
+        window.setTimeout(ensureSafeValue, 500);
+        window.addEventListener('load', ensureSafeValue, { once: true });
     }
 
     function setupListeners() {
@@ -828,6 +874,7 @@ window.APP_INITIAL_TAB = 'entrada';
             updateMesEditChip();
             renderIngresos();
             renderGastos();
+            sincronizarTotalesHormiga();
             registerActivity();
         });
 
@@ -880,6 +927,7 @@ window.APP_INITIAL_TAB = 'entrada';
     }
 
     function init() {
+        initGastoValorField();
         setupInlineCreate();
         setupListeners();
         activate();

@@ -73,7 +73,7 @@
           </div>
           <div class="field">
             <label>Valor (COP)</label>
-            <input id="ingresoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" />
+            <input id="ingresoValor" name="ingresoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" autocomplete="off" data-lpignore="true" x-autocompletetype="off" spellcheck="false" />
             <div id="ingresoValorError" class="error-message"></div>
           </div>
           <div class="field" style="align-self:flex-end;">
@@ -239,12 +239,12 @@
           </div>
           <div class="field">
             <label>Valor total (COP)</label>
-            <input id="gastoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" />
+            <input id="gastoValor" name="gastoValor" class="input currency-input" type="text" inputmode="numeric" placeholder="0" value="" autocomplete="off" data-lpignore="true" x-autocompletetype="off" spellcheck="false" />
             <div id="gastoValorError" class="error-message"></div>
           </div>
           <div class="field">
             <label><input type="checkbox" id="chkGastoCuotas" /> ¿Gasto en cuotas?</label>
-            <input id="gastoCuotas" class="input" type="number" min="2" step="1" placeholder="N° de cuotas" disabled />
+            <input id="gastoCuotas" name="gastoCuotas" class="input" type="number" min="2" step="1" placeholder="N° de cuotas" autocomplete="off" data-lpignore="true" x-autocompletetype="off" spellcheck="false" disabled />
             <div id="gastoCuotasError" class="error-message"></div>
           </div>
           <div class="field" style="align-self:flex-end;">
@@ -495,7 +495,7 @@
             <input id="hormigaConcepto" class="input" type="text" placeholder="Concepto (ej. Café, Transporte)" />
           </div>
           <div class="hormiga-form-row">
-            <input id="hormigaValor" class="input currency-input" type="text" placeholder="Valor (COP)" />
+            <input id="hormigaValor" name="hormigaValor" class="input currency-input" type="text" inputmode="numeric" placeholder="Valor (COP)" autocomplete="off" data-lpignore="true" x-autocompletetype="off" spellcheck="false" />
           </div>
           <div class="hormiga-form-row">
             <input id="hormigaFecha" class="input" type="date" />
