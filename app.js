@@ -296,7 +296,8 @@ let state = {
     adminSecurityPhrases: {},
     sessionExpiry: null,
     userProfile: null,
-    currentUser: null
+    currentUser: null,
+    informesTrimestrales: []
 };
 
 let tempIngresos = [];
@@ -351,6 +352,7 @@ function loadState(){
         state.sessionExpiry = loaded.sessionExpiry || null;
         state.userProfile = loaded.userProfile || null;
         state.currentUser = loaded.currentUser || null;
+        state.informesTrimestrales = Array.isArray(loaded.informesTrimestrales) ? loaded.informesTrimestrales : [];
         
         if (state.sessionExpiry && new Date(state.sessionExpiry) < new Date()) {
             state.currentUser = null;
@@ -2318,6 +2320,182 @@ function checkAndApplyMonthTransition() {
     return changed;
 }
 
+/* ==== INFORMES FINANCIEROS TRIMESTRALES ==== */
+const QUARTERLY_HEALTH = {
+    CRITICO: {
+        color: '#ef4444', icon: '🔴', title: 'Crisis de liquidez',
+        message: 'Una liquidez baja sostenida no es un tropiezo: es una señal para corregir gastos antes de que un imprevisto obligue a endeudarte.',
+        actions: ['Reduce gastos no esenciales esta semana.', 'Revisa gastos hormiga y fija un límite semanal.', 'Prioriza un fondo de emergencia, aunque sea pequeño.']
+    },
+    MEDIO: {
+        color: '#f59e0b', icon: '🟠', title: 'Control en construcción',
+        message: 'No puedes mejorar lo que no mides. Ya tienes el panorama; ahora convierte ese registro en decisiones concretas cada mes.',
+        actions: ['Automatiza una parte del ahorro al recibir ingresos.', 'Reduce los tres gastos variables más altos.', 'Busca una fuente adicional de ingreso o renegocia un gasto fijo.']
+    },
+    BUENO: {
+        color: '#4fc3f7', icon: '🟡', title: 'Base financiera sólida',
+        message: 'Has vencido la inercia y estás generando resultados. El siguiente riesgo es la complacencia: define un plan para escalar.',
+        actions: ['Mantén tu disciplina de registro.', 'Completa tu fondo de emergencia.', 'Destina excedentes a inversiones diversificadas y acordes a tu perfil.']
+    },
+    EXCELENTE: {
+        color: '#22c55e', icon: '🟢', title: 'Capacidad para crecer',
+        message: 'Ya demostraste que puedes conservar liquidez. Ahora protege esa base y haz que el excedente trabaje con diversificación y paciencia.',
+        actions: ['Escalona tus inversiones sin comprometer el fondo de emergencia.', 'Diversifica por tipo de activo y plazo.', 'Revisa tus metas de largo plazo y mide el avance trimestral.']
+    }
+};
+
+function getQuarterKey(mes) {
+    return `${mes.year}-Q${Math.floor(mes.monthIdx / 3) + 1}`;
+}
+
+function getQuarterAvailability(year, quarter) {
+    return new Date(year, quarter * 3, 1);
+}
+
+function getQuarterlyCandidates() {
+    const groups = new Map();
+    getOrderedMonths().forEach((mes) => {
+        const key = getQuarterKey(mes);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(mes);
+    });
+    return [...groups.entries()].map(([key, meses]) => {
+        const first = meses[0];
+        return { key, year: first.year, quarter: Math.floor(first.monthIdx / 3) + 1, meses };
+    }).filter((candidate) => candidate.meses.length === 3);
+}
+
+function getFinancialHealth(liquidez) {
+    if (liquidez <= 15) return 'CRITICO';
+    if (liquidez <= 30) return 'MEDIO';
+    if (liquidez <= 50) return 'BUENO';
+    return 'EXCELENTE';
+}
+
+function buildQuarterlyReport(candidate) {
+    const months = candidate.meses.sort((a, b) => a.monthIdx - b.monthIdx);
+    const evolucion = months.map((mes) => {
+        calcularMes(mes);
+        const ingresos = (mes.ingresos || []).reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+        const gastos = (mes.gastos || []).reduce((sum, item) => sum + (Number(item.valorTotal ?? item.valor) || 0), 0) + getTotalGastosHormigaMes(getMonthId(mes));
+        return { mes: mes.nombre, liquidez: mes.liqPct || 0, ingresos, gastos, restante: mes.restanteCierre || 0, ahorro: mes.ahorroConfirmado ? (mes.ahorroTotal || 0) : 0, hormiga: getTotalGastosHormigaMes(getMonthId(mes)) };
+    });
+    const current = evolucion[evolucion.length - 1];
+    const initial = evolucion[0];
+    const health = getFinancialHealth(current.liquidez);
+    const totalIngresos = evolucion.reduce((sum, item) => sum + item.ingresos, 0);
+    const totalGastos = evolucion.reduce((sum, item) => sum + item.gastos, 0);
+    const totalHormiga = evolucion.reduce((sum, item) => sum + item.hormiga, 0);
+    const totalAhorro = evolucion.reduce((sum, item) => sum + item.ahorro, 0);
+    const nextQuarter = candidate.quarter === 4 ? { year: candidate.year + 1, quarter: 1 } : { year: candidate.year, quarter: candidate.quarter + 1 };
+    const nextDate = getQuarterAvailability(nextQuarter.year, nextQuarter.quarter);
+    const user = state.currentUser || state.userProfile || {};
+    return {
+        id: `inf_${candidate.key}`,
+        key: candidate.key,
+        visto: false,
+        fechaGeneracion: new Date().toISOString(),
+        periodo: { year: candidate.year, quarter: candidate.quarter, inicio: months[0].nombre, fin: months[2].nombre },
+        usuario: { nombre: user.name || user.email?.split('@')[0] || 'Usuario' },
+        clasificacion: { categoria: health, ...QUARTERLY_HEALTH[health] },
+        resumen: {
+            liquidezActual: current.liquidez,
+            liquidezInicial: initial.liquidez,
+            variacionLiquidez: current.liquidez - initial.liquidez,
+            ingresos: totalIngresos,
+            gastos: totalGastos,
+            ahorro: totalAhorro,
+            gastoHormiga: totalHormiga,
+            porcentajeGasto: totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0
+        },
+        evolucion,
+        proximoInforme: nextDate.toISOString()
+    };
+}
+
+function generateAvailableQuarterlyReports() {
+    if (!hasMonths()) return [];
+    const now = new Date();
+    const generated = [];
+    getQuarterlyCandidates().forEach((candidate) => {
+        const availableAt = getQuarterAvailability(candidate.year, candidate.quarter);
+        if (now < availableAt || state.informesTrimestrales.some((report) => report.key === candidate.key)) return;
+        const report = buildQuarterlyReport(candidate);
+        state.informesTrimestrales.push(report);
+        generated.push(report);
+    });
+    if (generated.length) saveState();
+    return generated;
+}
+
+function getLatestQuarterlyReport() {
+    return [...state.informesTrimestrales].sort((a, b) => new Date(b.fechaGeneracion) - new Date(a.fechaGeneracion))[0] || null;
+}
+
+function formatReportDate(iso) {
+    return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+}
+
+function ensureQuarterlyReportUI() {
+    if (document.getElementById('informeBtn')) return;
+    const styles = document.createElement('style');
+    styles.textContent = `
+      .informe-floating-btn{position:fixed;right:1rem;bottom:1rem;z-index:90}.informe-float{position:relative;display:flex;gap:.45rem;align-items:center;box-shadow:0 10px 26px rgba(0,0,0,.35)}.informe-badge{display:none;position:absolute;top:-.38rem;right:-.38rem;min-width:1.25rem;height:1.25rem;border-radius:50%;background:#ef4444;color:#fff;font-size:.72rem;font-weight:800;place-items:center}.informe-badge.show{display:grid}.informe-report-modal{max-width:850px;max-height:90vh;overflow:auto}.informe-hero{padding:1rem;border-radius:12px;color:#eaf1f9;background:linear-gradient(135deg,#10213a,#0b1425);border-left:5px solid var(--report-color,#4fc3f7)}.informe-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:.6rem;margin:1rem 0}.informe-metric{padding:.7rem;border:1px solid var(--border);border-radius:10px;background:#0d1729}.informe-metric strong{display:block;margin-top:.2rem}.informe-bars{display:flex;align-items:flex-end;gap:.75rem;height:145px;padding:1rem .4rem;border:1px solid var(--border);border-radius:10px}.informe-bar{flex:1;min-width:55px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.35rem}.informe-bar i{display:block;width:100%;max-width:56px;border-radius:7px 7px 2px 2px;background:#4fc3f7}.informe-section{margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}.informe-section h4{margin:.1rem 0 .5rem}.informe-actions-list{margin:.4rem 0;padding-left:1.2rem}.informe-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}.informe-rule{padding:.55rem;border-radius:8px;background:#0d1729;font-size:.88rem}@media(max-width:640px){.informe-label{display:none}.informe-grid{grid-template-columns:repeat(2,1fr)}.informe-rules{grid-template-columns:1fr}.informe-floating-btn{right:.7rem;bottom:.7rem}}`;
+    document.head.appendChild(styles);
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <div class="informe-floating-btn" id="informeBtn"><button class="btn primary informe-float" type="button" id="btnInformeTrimestral"><span aria-hidden="true">📊</span><span class="informe-label">Informe financiero</span><span id="informeBadge" class="informe-badge">!</span></button></div>
+      <div id="informeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="informeTitle"><div class="modal-content informe-report-modal"><div class="modal-header"><div class="modal-title" id="informeTitle">Informe financiero trimestral</div><button class="modal-close" type="button" id="btnCloseInforme">&times;</button></div><div class="modal-body" id="informeContenido"></div><div class="modal-footer"><button class="btn secondary" type="button" id="btnPrintInforme">Imprimir / Guardar PDF</button><button class="btn primary" type="button" id="btnMarkInforme">Marcar como leído</button></div></div></div>`;
+    document.body.appendChild(root);
+    document.getElementById('btnInformeTrimestral').addEventListener('click', mostrarInformeTrimestral);
+    document.getElementById('btnCloseInforme').addEventListener('click', () => { document.getElementById('informeModal').style.display = 'none'; });
+    document.getElementById('btnPrintInforme').addEventListener('click', () => window.print());
+    document.getElementById('btnMarkInforme').addEventListener('click', () => {
+        const report = getLatestQuarterlyReport();
+        if (report) { report.visto = true; saveState(); updateQuarterlyReportButton(); }
+        document.getElementById('informeModal').style.display = 'none';
+    });
+}
+
+function updateQuarterlyReportButton() {
+    const button = document.getElementById('btnInformeTrimestral');
+    const badge = document.getElementById('informeBadge');
+    if (!button || !badge) return;
+    const report = getLatestQuarterlyReport();
+    const unread = report && !report.visto;
+    badge.classList.toggle('show', Boolean(unread));
+    button.querySelector('.informe-label').textContent = report ? (unread ? 'Informe ¡nuevo!' : 'Informe financiero') : 'Informe trimestral';
+}
+
+function mostrarInformeTrimestral() {
+    generateAvailableQuarterlyReports();
+    const report = getLatestQuarterlyReport();
+    const content = document.getElementById('informeContenido');
+    if (!content) return;
+    if (!report) {
+        content.innerHTML = '<p>Aún no hay un trimestre cerrado con tres meses registrados. El informe aparecerá automáticamente el primer día después de completar el trimestre.</p>';
+        document.getElementById('btnMarkInforme').style.display = 'none';
+    } else {
+        const { clasificacion: health, resumen, evolucion } = report;
+        const maxLiquidity = Math.max(1, ...evolucion.map((item) => item.liquidez));
+        content.innerHTML = `
+          <div class="informe-hero" style="--report-color:${health.color}"><div>${health.icon} ${health.categoria}: ${health.title}</div><h3>${Utils.escapeHTML(report.periodo.inicio)} – ${Utils.escapeHTML(report.periodo.fin)}</h3><p>${Utils.escapeHTML(health.message)}</p></div>
+          <div class="informe-grid"><div class="informe-metric">Liquidez actual<strong>${Utils.fmtPct2(resumen.liquidezActual)}</strong></div><div class="informe-metric">Variación<strong>${resumen.variacionLiquidez >= 0 ? '+' : ''}${Utils.fmtPct2(resumen.variacionLiquidez)}</strong></div><div class="informe-metric">Ingresos<strong>${Utils.fmtCOP.format(resumen.ingresos)}</strong></div><div class="informe-metric">Ahorro confirmado<strong>${Utils.fmtCOP.format(resumen.ahorro)}</strong></div></div>
+          <section class="informe-section"><h4>Evolución de liquidez</h4><div class="informe-bars">${evolucion.map((item) => `<div class="informe-bar"><i style="height:${Math.max(3, item.liquidez / maxLiquidity * 100)}%"></i><span>${Utils.escapeHTML(item.mes.split(' ')[0])}</span><small>${Utils.fmtPct2(item.liquidez)}</small></div>`).join('')}</div></section>
+          <section class="informe-section"><h4>Situación actual</h4><p>Gastos del trimestre: <strong>${Utils.fmtCOP.format(resumen.gastos)}</strong> (${Utils.fmtPct2(resumen.porcentajeGasto)} de los ingresos). Gastos hormiga: <strong>${Utils.fmtCOP.format(resumen.gastoHormiga)}</strong>.</p></section>
+          <section class="informe-section"><h4>Plan de acción personalizado</h4><ol class="informe-actions-list">${health.actions.map((action) => `<li>${Utils.escapeHTML(action)}</li>`).join('')}</ol></section>
+          <section class="informe-section"><h4>Las 5 reglas de oro</h4><div class="informe-rules"><div class="informe-rule">1. Ahorra primero, gasta después.</div><div class="informe-rule">2. Invierte antes de gastar.</div><div class="informe-rule">3. No comprometas tu fondo de emergencia.</div><div class="informe-rule">4. Diversifica siempre.</div><div class="informe-rule">5. Sé paciente y consistente.</div></div></section>
+          <section class="informe-section"><h4>Próximo informe</h4><p>${formatReportDate(report.proximoInforme)}. Continúa registrando tus movimientos para recibir recomendaciones cada vez más precisas.</p></section>`;
+        document.getElementById('btnMarkInforme').style.display = '';
+        report.visto = true;
+        saveState();
+    }
+    updateQuarterlyReportButton();
+    document.getElementById('informeModal').style.display = 'flex';
+}
+
+window.mostrarInformeTrimestral = mostrarInformeTrimestral;
+
 function distribuirCuotas(total, n){
     total = Math.max(0, Math.floor(total));
     n = Math.max(2, Math.floor(n));
@@ -3330,6 +3508,10 @@ function init(){
     if (checkAuth()) updateAuthUI();
 
     checkAndApplyMonthTransition();
+    const newQuarterlyReports = generateAvailableQuarterlyReports();
+    ensureQuarterlyReportUI();
+    updateQuarterlyReportButton();
+    if (newQuarterlyReports.length) softToast('Tu informe financiero trimestral ya está disponible', 'ok');
     
     if (window.location.search.includes('reset=')) {
         resetPasswordWithToken();
