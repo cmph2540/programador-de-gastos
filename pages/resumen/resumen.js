@@ -43,6 +43,9 @@ window.APP_INITIAL_TAB = 'resumen';
         tbody.innerHTML = '';
         if (state.meses.length === 0) return;
 
+        // Recalcula los valores derivados de todos los meses antes de
+        // dibujarlos, incluyendo datos creados con fórmulas anteriores.
+        recalcularSaldosMeses();
         const mesesOrd = [...state.meses].sort((a, b) => (a.year - b.year) || (a.monthIdx - b.monthIdx));
         const dineroVals = mesesOrd.map((mes) => mes.saldo);
         const sortedVals = [...dineroVals].sort((a, b) => a - b);

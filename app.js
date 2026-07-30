@@ -2278,7 +2278,12 @@ function calcularMes(m){
     const ahorroEfectivo = m.ahorroConfirmado ? Math.max(0, Number(m.ahorroTotal) || 0) : 0;
     m.restanteCierre = Math.max(0, Math.round(m.saldo - ahorroEfectivo - m.gastoValor - inversionesMes));
     m.disponible = m.restanteCierre;
-    m.liqPct = m.saldo > 0 ? Math.min(100, Math.max(0, (m.restanteCierre / m.saldo) * 100)) : 0;
+    // Los indicadores del resumen deben reflejar la liquidez real del mes,
+    // igual que la vista de entrada. El restante de cierre se conserva para
+    // la proyección de ahorro, gasto e inversiones, pero no define estos %.
+    m.liqPct = totalIng > 0
+        ? Math.min(100, (m.saldo / totalIng) * 100)
+        : m.saldo < 0 ? -100 : m.saldo > 0 ? 100 : 0;
     m.expPct = 100 - m.liqPct;
 }
 
