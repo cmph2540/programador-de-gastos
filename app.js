@@ -2288,38 +2288,47 @@ function calcularMes(m){
 }
 
 function recalcularSaldosMeses() {
-    getOrderedMonths().forEach(calcularMes);
+    const mesesOrdenados = getOrderedMonths();
+    let changed = false;
+
+    mesesOrdenados.forEach((mes, index) => {
+        ensureMonthBalanceFields(mes);
+
+        // El primer mes conserva su saldo inicial como punto de partida. A
+        // partir del segundo, cada mes recibe el cierre del mes anterior.
+        if (index > 0) {
+            const mesAnterior = mesesOrdenados[index - 1];
+            const saldoInicial = Math.max(0, Number(mesAnterior.restanteCierre) || 0);
+            if (mes.saldoInicialMes !== saldoInicial || !mes.restanteAnteriorAplicado) {
+                changed = true;
+            }
+            mes.saldoInicialMes = saldoInicial;
+            mes.restanteAnteriorAplicado = true;
+            mesAnterior.mesCerrado = true;
+        }
+
+        calcularMes(mes);
+    });
+
+    return changed;
 }
 
 function verificarYArrastrarSaldo({ notify = false } = {}) {
-    const today = new Date();
-    const mesActual = state.meses.find((mes) => mes.monthIdx === today.getMonth() && mes.year === today.getFullYear());
-    if (!mesActual) return false;
+    const changed = recalcularSaldosMeses();
 
-    const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const mesAnterior = state.meses.find((mes) => mes.monthIdx === previousDate.getMonth() && mes.year === previousDate.getFullYear());
-    if (!mesAnterior || !monthHasFinancialData(mesAnterior)) return false;
-
-    ensureMonthBalanceFields(mesAnterior);
-    ensureMonthBalanceFields(mesActual);
-    calcularMes(mesAnterior);
-    const siguienteSaldoInicial = Math.max(0, mesAnterior.restanteCierre || 0);
-    const changed = !mesActual.restanteAnteriorAplicado || mesActual.saldoInicialMes !== siguienteSaldoInicial || !mesAnterior.mesCerrado;
-
-    mesActual.saldoInicialMes = siguienteSaldoInicial;
-    mesActual.restanteAnteriorAplicado = true;
-    mesAnterior.mesCerrado = true;
-    calcularMes(mesActual);
-
-    if (changed && notify && siguienteSaldoInicial > 0) {
-        softToast(`Saldo del mes anterior aplicado: ${Utils.fmtCOP.format(siguienteSaldoInicial)}`, 'ok');
+    if (changed && notify) {
+        const today = new Date();
+        const mesActual = state.meses.find((mes) => mes.monthIdx === today.getMonth() && mes.year === today.getFullYear());
+        const saldoInicial = mesActual ? Math.max(0, Number(mesActual.saldoInicialMes) || 0) : 0;
+        if (saldoInicial > 0) {
+            softToast(`Saldo del mes anterior aplicado: ${Utils.fmtCOP.format(saldoInicial)}`, 'ok');
+        }
     }
     return changed;
 }
 
 function checkAndApplyMonthTransition() {
     state.meses.forEach(ensureMonthBalanceFields);
-    recalcularSaldosMeses();
     const changed = verificarYArrastrarSaldo({ notify: false });
     if (changed) saveState();
     return changed;

@@ -86,18 +86,27 @@ window.APP_INITIAL_TAB = 'entrada';
         const indicator = document.getElementById('saldoDistribucionIndicador');
         if (!tooltip || !indicator) return;
 
-        if (!mes || !mes.saldoDistribucionConfigurada) {
+        if (!mes) {
             indicator.hidden = true;
             tooltip.innerHTML = '<div class="muted">Haz clic para distribuir este saldo entre efectivo y cuentas.</div>';
             return;
         }
 
-        indicator.hidden = false;
+        const ingresos = (mes.ingresos || []).reduce((total, item) => total + (Number(item.valor) || 0), 0);
+        const gastos = (mes.gastos || []).reduce((total, item) => total + (Number(item.valorTotal ?? item.valor) || 0), 0) + getTotalGastosHormigaMes(getMonthId(mes));
+        const arrastre = Math.max(0, Number(mes.saldoInicialMes) || 0);
+
+        indicator.hidden = !mes.saldoDistribucionConfigurada;
         tooltip.innerHTML = `
-            <div><span>💰 Efectivo</span><strong>${Utils.fmtCOP.format(mes.saldoEfectivo)}</strong></div>
-            <div><span>🏦 Cuentas</span><strong>${Utils.fmtCOP.format(mes.saldoCuentas)}</strong></div>
-            <div><span>Total</span><strong>${Utils.fmtCOP.format(Math.max(0, saldo))}</strong></div>
-            <div class="muted">Haz clic para editar</div>
+            <div><span>Ingresos del mes</span><strong>${Utils.fmtCOP.format(ingresos)}</strong></div>
+            <div><span>Saldo inicial arrastrado</span><strong>${Utils.fmtCOP.format(arrastre)}</strong></div>
+            <div><span>Gastos del mes</span><strong>-${Utils.fmtCOP.format(gastos)}</strong></div>
+            <div><span>Total</span><strong>${Utils.fmtCOP.format(saldo)}</strong></div>
+            ${mes.saldoDistribucionConfigurada ? `
+                <div><span>Efectivo</span><strong>${Utils.fmtCOP.format(mes.saldoEfectivo)}</strong></div>
+                <div><span>Cuentas</span><strong>${Utils.fmtCOP.format(mes.saldoCuentas)}</strong></div>
+            ` : ''}
+            <div class="muted">Haz clic para distribuir el saldo entre efectivo y cuentas.</div>
         `;
     }
 
