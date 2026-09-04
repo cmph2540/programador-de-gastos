@@ -1763,18 +1763,22 @@ function updateResumenContext(){
     const totalIng = ingresos.reduce((a,b)=>a+b.valor,0);
     let totalGas = gastos.reduce((a,b)=>a+(b.valorTotal ?? b.valor),0);
     totalGas += getTotalGastosHormiga();
-    const saldo = totalIng - totalGas;
+    const mes = hasMonths() ? currentMonthObj() : null;
+    if (mes) calcularMes(mes);
+    const saldoInicial = mes ? mes.saldoInicialMes : 0;
+    const recursosDisponibles = totalIng + saldoInicial;
+    const saldo = mes ? mes.saldo : totalIng - totalGas;
 
     const chip = document.getElementById('saldoChip');
     let chipClass = 'ok';
     if (saldo < 0) chipClass = 'danger';
     else if (saldo === 0) chipClass = 'warn';
-    else if (saldo < totalIng * 0.1) chipClass = 'warn';
+    else if (saldo < recursosDisponibles * 0.1) chipClass = 'warn';
     chip.className = `chip ${chipClass}`;
     document.getElementById('saldoTexto').textContent = Utils.fmtCOP.format(saldo);
 
-    const liq = totalIng > 0 ? Math.min(100, (saldo / totalIng) * 100) : saldo < 0 ? -100 : saldo > 0 ? 100 : 0;
-    const exp = 100 - liq;
+    const liq = recursosDisponibles > 0 ? (saldo / recursosDisponibles) * 100 : 0;
+    const exp = recursosDisponibles > 0 ? (totalGas / recursosDisponibles) * 100 : 0;
     
     requestAnimationFrame(() => {
         document.getElementById('liqFill').style.width = `${Math.max(0, Math.min(100, liq)).toFixed(0)}%`;
@@ -2278,13 +2282,11 @@ function calcularMes(m){
     const ahorroEfectivo = m.ahorroConfirmado ? Math.max(0, Number(m.ahorroTotal) || 0) : 0;
     m.restanteCierre = Math.max(0, Math.round(m.saldo - ahorroEfectivo - m.gastoValor - inversionesMes));
     m.disponible = m.restanteCierre;
-    // Los indicadores del resumen deben reflejar la liquidez real del mes,
-    // igual que la vista de entrada. El restante de cierre se conserva para
-    // la proyección de ahorro, gasto e inversiones, pero no define estos %.
-    m.liqPct = totalIng > 0
-        ? Math.min(100, (m.saldo / totalIng) * 100)
-        : m.saldo < 0 ? -100 : m.saldo > 0 ? 100 : 0;
-    m.expPct = 100 - m.liqPct;
+    // Liquidez y gastos se miden contra los recursos operativos del mes:
+    // saldo arrastrado + ingresos. Ahorro e inversiones se siguen aparte.
+    const recursosDisponibles = m.saldoInicialMes + totalIng;
+    m.liqPct = recursosDisponibles > 0 ? (m.saldo / recursosDisponibles) * 100 : 0;
+    m.expPct = recursosDisponibles > 0 ? (totalGas / recursosDisponibles) * 100 : 0;
 }
 
 function recalcularSaldosMeses() {

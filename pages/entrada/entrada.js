@@ -48,20 +48,22 @@ window.APP_INITIAL_TAB = 'entrada';
         const mes = hasEntradaMonths() ? state.meses[selectedMonthIdxEntrada()] : null;
         if (mes) calcularMes(mes);
         const saldo = mes ? mes.saldo : totalIng - totalGas;
+        const saldoInicial = mes ? mes.saldoInicialMes : 0;
+        const recursosDisponibles = totalIng + saldoInicial;
 
         const chip = document.getElementById('saldoChip');
         if (!chip) return;
 
         let chipClass = 'ok';
         if (saldo < 0) chipClass = 'danger';
-        else if (saldo === 0 || saldo < totalIng * 0.1) chipClass = 'warn';
+        else if (saldo === 0 || saldo < recursosDisponibles * 0.1) chipClass = 'warn';
 
         chip.className = `chip ${chipClass} saldo-chip-editable`;
         document.getElementById('saldoTexto').textContent = Utils.fmtCOP.format(saldo);
         renderSaldoDistribution(mes, saldo);
 
-        const liq = totalIng > 0 ? Math.min(100, (saldo / totalIng) * 100) : saldo < 0 ? -100 : saldo > 0 ? 100 : 0;
-        const exp = 100 - liq;
+        const liq = recursosDisponibles > 0 ? (saldo / recursosDisponibles) * 100 : 0;
+        const exp = recursosDisponibles > 0 ? (totalGas / recursosDisponibles) * 100 : 0;
 
         requestAnimationFrame(() => {
             document.getElementById('liqFill').style.width = `${Math.max(0, Math.min(100, liq)).toFixed(0)}%`;
