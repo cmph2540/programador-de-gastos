@@ -2388,13 +2388,90 @@ function getFinancialHealth(liquidez) {
     return 'EXCELENTE';
 }
 
+function getQuarterExpenseBreakdown(months) {
+    const hormigaByConcept = new Map();
+    const expensesByType = new Map();
+    let totalHormiga = 0;
+    let totalTypedExpenses = 0;
+
+    months.forEach((mes) => {
+        getGastosHormigaMes(getMonthId(mes)).forEach((item) => {
+            const concepto = String(item.concepto || 'Sin concepto').trim() || 'Sin concepto';
+            const valor = Number(item.valor) || 0;
+            totalHormiga += valor;
+            hormigaByConcept.set(concepto, (hormigaByConcept.get(concepto) || 0) + valor);
+        });
+        (mes.gastos || []).forEach((item) => {
+            const tipo = String(item.tipo || 'Sin tipo').trim() || 'Sin tipo';
+            const valor = Number(item.valorTotal ?? item.valor) || 0;
+            totalTypedExpenses += valor;
+            expensesByType.set(tipo, (expensesByType.get(tipo) || 0) + valor);
+        });
+    });
+
+    const topThree = (entries, total) => [...entries.entries()]
+        .map(([nombre, valor]) => ({ nombre, valor, porcentaje: total > 0 ? (valor / total) * 100 : 0 }))
+        .sort((a, b) => b.valor - a.valor || a.nombre.localeCompare(b.nombre, 'es'))
+        .slice(0, 3);
+
+    return {
+        topGastosHormiga: topThree(hormigaByConcept, totalHormiga),
+        totalGastosHormiga: totalHormiga,
+        topTiposGasto: topThree(expensesByType, totalTypedExpenses),
+        totalGastosPorTipo: totalTypedExpenses
+    };
+}
+
+function getQuarterMonthsForReport(report) {
+    if (!report?.key) return [];
+    return getOrderedMonths().filter((mes) => getQuarterKey(mes) === report.key);
+}
+
+function buildLiquidityChart(evolucion, months = []) {
+    const width = 720;
+    const height = 210;
+    const left = 52;
+    const right = 688;
+    const top = 30;
+    const bottom = 156;
+    const values = evolucion.map((item) => Number(item.liquidez) || 0);
+    const minValue = Math.floor(Math.min(0, ...values) / 25) * 25;
+    const maxValue = Math.max(100, Math.ceil(Math.max(...values) / 25) * 25);
+    const valueRange = Math.max(25, maxValue - minValue);
+    const points = evolucion.map((item, index) => {
+        const x = evolucion.length === 1 ? (left + right) / 2 : left + ((right - left) * index) / (evolucion.length - 1);
+        const percentage = Number(item.liquidez) || 0;
+        return { ...item, x, y: bottom - ((bottom - top) * (percentage - minValue) / valueRange), percentage };
+    });
+    const grid = Array.from({ length: Math.floor(valueRange / 25) + 1 }, (_, index) => minValue + index * 25).map((value) => {
+        const y = bottom - ((bottom - top) * (value - minValue) / valueRange);
+        return `<g class="informe-chart-grid"><line x1="${left}" y1="${y}" x2="${right}" y2="${y}"/><text x="${left - 10}" y="${y + 4}" text-anchor="end">${value}%</text></g>`;
+    }).join('');
+    const line = points.map((point) => `${point.x},${point.y}`).join(' ');
+    const marks = points.map((point) => `<g><circle class="informe-chart-point" cx="${point.x}" cy="${point.y}" r="6"/><text class="informe-chart-label" x="${point.x}" y="${Math.max(18, point.y - 13)}" text-anchor="middle">${Utils.fmtPct2(point.percentage)}</text></g>`).join('');
+    const details = points.map((point, index) => {
+        const month = months[index];
+        const resources = (Number(month?.saldoInicialMes) || 0) + (Number(point.ingresos) || 0);
+        const equivalentValue = Number.isFinite(Number(point.saldo)) ? Number(point.saldo) : (Number.isFinite(Number(month?.saldo)) ? Number(month.saldo) : (point.percentage / 100) * resources);
+        return `<div class="informe-chart-detail"><span>${Utils.escapeHTML(point.mes)}</span><strong>${Utils.fmtPct2(point.percentage)}</strong><small>${Utils.fmtCOP.format(equivalentValue)} saldo</small></div>`;
+    }).join('');
+    return `<div class="informe-chart-wrap"><svg class="informe-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Evolución mensual de liquidez en porcentaje">${grid}<polyline class="informe-chart-line" points="${line}"/>${marks}</svg><div class="informe-chart-details">${details}</div></div>`;
+}
+
+function renderQuarterRanking(title, subtitle, entries, emptyText) {
+    const rows = entries?.length
+        ? entries.map((item, index) => `<div class="informe-ranking-row"><span class="informe-ranking-position">${index + 1}</span><span class="informe-ranking-name">${Utils.escapeHTML(item.nombre)}</span><strong>${Utils.fmtCOP.format(item.valor)}</strong><span class="informe-ranking-share">${Utils.fmtPct2(item.porcentaje)}</span></div>`).join('')
+        : `<p class="informe-ranking-empty">${emptyText}</p>`;
+    return `<section class="informe-section informe-keep-together"><div class="informe-section-heading"><h4>${title}</h4><small>${subtitle}</small></div><div class="informe-ranking">${rows}</div></section>`;
+}
+
 function buildQuarterlyReport(candidate) {
     const months = candidate.meses.sort((a, b) => a.monthIdx - b.monthIdx);
     const evolucion = months.map((mes) => {
         calcularMes(mes);
         const ingresos = (mes.ingresos || []).reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
         const gastos = (mes.gastos || []).reduce((sum, item) => sum + (Number(item.valorTotal ?? item.valor) || 0), 0) + getTotalGastosHormigaMes(getMonthId(mes));
-        return { mes: mes.nombre, liquidez: mes.liqPct || 0, ingresos, gastos, restante: mes.restanteCierre || 0, ahorro: mes.ahorroConfirmado ? (mes.ahorroTotal || 0) : 0, hormiga: getTotalGastosHormigaMes(getMonthId(mes)) };
+        return { mes: mes.nombre, liquidez: mes.liqPct || 0, saldo: mes.saldo || 0, ingresos, gastos, restante: mes.restanteCierre || 0, ahorro: mes.ahorroConfirmado ? (mes.ahorroTotal || 0) : 0, hormiga: getTotalGastosHormigaMes(getMonthId(mes)) };
     });
     const current = evolucion[evolucion.length - 1];
     const initial = evolucion[0];
@@ -2424,6 +2501,7 @@ function buildQuarterlyReport(candidate) {
             gastoHormiga: totalHormiga,
             porcentajeGasto: totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0
         },
+        analisis: getQuarterExpenseBreakdown(months),
         evolucion,
         proximoInforme: nextDate.toISOString()
     };
@@ -2456,7 +2534,9 @@ function ensureQuarterlyReportUI() {
     if (document.getElementById('informeBtn')) return;
     const styles = document.createElement('style');
     styles.textContent = `
-      .informe-floating-btn{position:fixed;right:1rem;bottom:1rem;z-index:90}.informe-float{position:relative;display:flex;gap:.45rem;align-items:center;box-shadow:0 10px 26px rgba(0,0,0,.35)}.informe-badge{display:none;position:absolute;top:-.38rem;right:-.38rem;min-width:1.25rem;height:1.25rem;border-radius:50%;background:#ef4444;color:#fff;font-size:.72rem;font-weight:800;place-items:center}.informe-badge.show{display:grid}.informe-report-modal{max-width:850px;max-height:90vh;overflow:auto}.informe-hero{padding:1rem;border-radius:12px;color:#eaf1f9;background:linear-gradient(135deg,#10213a,#0b1425);border-left:5px solid var(--report-color,#4fc3f7)}.informe-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:.6rem;margin:1rem 0}.informe-metric{padding:.7rem;border:1px solid var(--border);border-radius:10px;background:#0d1729}.informe-metric strong{display:block;margin-top:.2rem}.informe-bars{display:flex;align-items:flex-end;gap:.75rem;height:145px;padding:1rem .4rem;border:1px solid var(--border);border-radius:10px}.informe-bar{flex:1;min-width:55px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.35rem}.informe-bar i{display:block;width:100%;max-width:56px;border-radius:7px 7px 2px 2px;background:#4fc3f7}.informe-section{margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}.informe-section h4{margin:.1rem 0 .5rem}.informe-actions-list{margin:.4rem 0;padding-left:1.2rem}.informe-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}.informe-rule{padding:.55rem;border-radius:8px;background:#0d1729;font-size:.88rem}@media(max-width:640px){.informe-label{display:none}.informe-grid{grid-template-columns:repeat(2,1fr)}.informe-rules{grid-template-columns:1fr}.informe-floating-btn{right:.7rem;bottom:.7rem}}`;
+      .informe-floating-btn{position:fixed;right:1rem;bottom:1rem;z-index:90}.informe-float{position:relative;display:flex;gap:.45rem;align-items:center;box-shadow:0 10px 26px rgba(0,0,0,.35)}.informe-badge{display:none;position:absolute;top:-.38rem;right:-.38rem;min-width:1.25rem;height:1.25rem;border-radius:50%;background:#ef4444;color:#fff;font-size:.72rem;font-weight:800;place-items:center}.informe-badge.show{display:grid}.informe-report-modal{max-width:850px;max-height:90vh;overflow:auto}.informe-hero{padding:1rem;border-radius:12px;color:#eaf1f9;background:linear-gradient(135deg,#10213a,#0b1425);border-left:5px solid var(--report-color,#4fc3f7)}.informe-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:.6rem;margin:1rem 0}.informe-metric{padding:.7rem;border:1px solid var(--border);border-radius:10px;background:#0d1729}.informe-metric strong{display:block;margin-top:.2rem}.informe-section{margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}.informe-section h4{margin:.1rem 0 .5rem}.informe-section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}.informe-section-heading small{color:var(--muted,#a8b4c5)}.informe-chart-wrap{padding:.5rem .7rem;border:1px solid var(--border);border-radius:10px;background:#0d1729}.informe-line-chart{display:block;width:100%;height:auto;overflow:visible}.informe-chart-grid line{stroke:rgba(148,163,184,.2);stroke-width:1}.informe-chart-grid text{fill:#a8b4c5;font-size:11px}.informe-chart-line{fill:none;stroke:#4fc3f7;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.informe-chart-point{fill:#10213a;stroke:#4fc3f7;stroke-width:4}.informe-chart-label{fill:#eaf1f9;font-size:13px;font-weight:700}.informe-chart-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;padding:.2rem .25rem .4rem}.informe-chart-detail{display:grid;gap:.1rem;text-align:center;padding:.55rem .3rem;border:1px solid var(--border);border-radius:8px;background:#111e32}.informe-chart-detail small{color:#cbd5e1}.informe-ranking{display:grid;gap:.4rem}.informe-ranking-row{display:grid;grid-template-columns:1.6rem minmax(0,1fr) auto 3.8rem;align-items:center;gap:.55rem;padding:.6rem .7rem;border:1px solid var(--border);border-radius:9px;background:#0d1729}.informe-ranking-position{display:grid;place-items:center;width:1.45rem;height:1.45rem;border-radius:50%;background:#173453;color:#8cddff;font-weight:800}.informe-ranking-name{min-width:0;overflow-wrap:anywhere}.informe-ranking-share{text-align:right;color:#8cddff}.informe-ranking-empty{margin:.2rem 0;color:var(--muted,#a8b4c5)}.informe-actions-list{margin:.4rem 0;padding-left:1.2rem}.informe-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}.informe-rule{padding:.55rem;border-radius:8px;background:#0d1729;font-size:.88rem}@media(max-width:640px){.informe-label{display:none}.informe-grid{grid-template-columns:repeat(2,1fr)}.informe-rules{grid-template-columns:1fr}.informe-floating-btn{right:.7rem;bottom:.7rem}.informe-section-heading{display:block}.informe-ranking-row{grid-template-columns:1.5rem minmax(0,1fr) auto}.informe-ranking-share{grid-column:2/-1;text-align:left;font-size:.82rem}.informe-chart-details{grid-template-columns:1fr}.informe-chart-detail{grid-template-columns:1fr auto auto;align-items:center;text-align:left;gap:.5rem}}
+      @media print{@page{size:auto;margin:12mm}html,body{background:#0b1425!important;color:#eaf1f9!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body *{visibility:hidden!important}#informeModal,#informeModal *{visibility:visible!important}#informeModal{position:absolute!important;inset:0 auto auto 0!important;display:block!important;width:100%!important;height:auto!important;min-height:0!important;padding:0!important;margin:0!important;background:#0b1425!important;backdrop-filter:none!important;overflow:visible!important;z-index:auto!important}.informe-report-modal{position:static!important;width:100%!important;max-width:none!important;max-height:none!important;height:auto!important;overflow:visible!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#0b1425!important;color:#eaf1f9!important;animation:none!important}.informe-report-modal .modal-header{margin:0 0 8mm!important;padding:0 0 3mm!important;border-bottom:1px solid #334155!important}.informe-report-modal .modal-close,.informe-report-modal .modal-footer{display:none!important}.informe-report-modal .modal-body{overflow:visible!important;padding:0!important}.informe-hero,.informe-metric,.informe-chart-wrap,.informe-chart-detail,.informe-ranking-row,.informe-rule{background-color:#0d1729!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.informe-hero{background-image:linear-gradient(135deg,#10213a,#0b1425)!important}.informe-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;break-inside:avoid;page-break-inside:avoid}.informe-keep-together,.informe-chart-wrap,.informe-chart-details,.informe-ranking-row,.informe-rule{break-inside:avoid;page-break-inside:avoid}.informe-section{break-inside:auto;page-break-inside:auto}.informe-section h4{break-after:avoid;page-break-after:avoid}.informe-chart-wrap{padding:4mm!important}.informe-line-chart{max-height:65mm}.informe-chart-details{grid-template-columns:repeat(3,minmax(0,1fr))!important}.informe-chart-detail{grid-template-columns:1fr!important;text-align:center!important}.informe-ranking-row{grid-template-columns:1.6rem minmax(0,1fr) auto 3.8rem!important}.informe-ranking-share{grid-column:auto!important;text-align:right!important}.informe-rules{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+    `;
     document.head.appendChild(styles);
     const root = document.createElement('div');
     root.innerHTML = `
@@ -2493,12 +2573,18 @@ function mostrarInformeTrimestral() {
         document.getElementById('btnMarkInforme').style.display = 'none';
     } else {
         const { clasificacion: health, resumen, evolucion } = report;
-        const maxLiquidity = Math.max(1, ...evolucion.map((item) => item.liquidez));
+        const quarterMonths = getQuarterMonthsForReport(report);
+        const breakdown = report.analisis || (quarterMonths.length
+            ? getQuarterExpenseBreakdown(quarterMonths)
+            : { topGastosHormiga: [], topTiposGasto: [] });
+        const liquidityMonths = quarterMonths.length === evolucion.length ? quarterMonths : [];
         content.innerHTML = `
           <div class="informe-hero" style="--report-color:${health.color}"><div>${health.icon} ${health.categoria}: ${health.title}</div><h3>${Utils.escapeHTML(report.periodo.inicio)} – ${Utils.escapeHTML(report.periodo.fin)}</h3><p>${Utils.escapeHTML(health.message)}</p></div>
           <div class="informe-grid"><div class="informe-metric">Liquidez actual<strong>${Utils.fmtPct2(resumen.liquidezActual)}</strong></div><div class="informe-metric">Variación<strong>${resumen.variacionLiquidez >= 0 ? '+' : ''}${Utils.fmtPct2(resumen.variacionLiquidez)}</strong></div><div class="informe-metric">Ingresos<strong>${Utils.fmtCOP.format(resumen.ingresos)}</strong></div><div class="informe-metric">Ahorro confirmado<strong>${Utils.fmtCOP.format(resumen.ahorro)}</strong></div></div>
-          <section class="informe-section"><h4>Evolución de liquidez</h4><div class="informe-bars">${evolucion.map((item) => `<div class="informe-bar"><i style="height:${Math.max(3, item.liquidez / maxLiquidity * 100)}%"></i><span>${Utils.escapeHTML(item.mes.split(' ')[0])}</span><small>${Utils.fmtPct2(item.liquidez)}</small></div>`).join('')}</div></section>
+          <section class="informe-section informe-keep-together"><h4>Evolución de liquidez</h4>${buildLiquidityChart(evolucion, liquidityMonths)}</section>
           <section class="informe-section"><h4>Situación actual</h4><p>Gastos del trimestre: <strong>${Utils.fmtCOP.format(resumen.gastos)}</strong> (${Utils.fmtPct2(resumen.porcentajeGasto)} de los ingresos). Gastos hormiga: <strong>${Utils.fmtCOP.format(resumen.gastoHormiga)}</strong>.</p></section>
+          ${renderQuarterRanking('Top 3 gastos hormiga', 'Porcentaje del total de gastos hormiga', breakdown.topGastosHormiga, 'No hay gastos hormiga registrados en este trimestre.')}
+          ${renderQuarterRanking('Top 3 tipos de gasto', 'Porcentaje del total registrado por tipo', breakdown.topTiposGasto, 'No hay gastos por tipo registrados en este trimestre.')}
           <section class="informe-section"><h4>Plan de acción personalizado</h4><ol class="informe-actions-list">${health.actions.map((action) => `<li>${Utils.escapeHTML(action)}</li>`).join('')}</ol></section>
           <section class="informe-section"><h4>Las 5 reglas de oro</h4><div class="informe-rules"><div class="informe-rule">1. Ahorra primero, gasta después.</div><div class="informe-rule">2. Invierte antes de gastar.</div><div class="informe-rule">3. No comprometas tu fondo de emergencia.</div><div class="informe-rule">4. Diversifica siempre.</div><div class="informe-rule">5. Sé paciente y consistente.</div></div></section>
           <section class="informe-section"><h4>Próximo informe</h4><p>${formatReportDate(report.proximoInforme)}. Continúa registrando tus movimientos para recibir recomendaciones cada vez más precisas.</p></section>`;
