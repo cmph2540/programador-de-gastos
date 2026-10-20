@@ -1634,7 +1634,7 @@ function renderPagoDonut(){
     const pagado = gastos.reduce((a,b) => {
         if (b.pagado) return a + ((b.valorTotal ?? b.valor) || 0);
         return a;
-    }, 0);
+    }, 0) + getTotalGastosHormiga();
     
     const pctNum = total > 0 ? Math.min(100, Math.max(0, (pagado/total)*100)) : 0;
     const C = 2 * Math.PI * 60;

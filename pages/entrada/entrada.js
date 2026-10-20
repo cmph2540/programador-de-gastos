@@ -212,7 +212,7 @@ window.APP_INITIAL_TAB = 'entrada';
     function renderPagoDonut() {
         const gastos = getGastosEntrada();
         const total = gastos.reduce((acc, item) => acc + ((item.valorTotal ?? item.valor) || 0), 0) + getTotalGastosHormiga();
-        const pagado = gastos.reduce((acc, item) => acc + (item.pagado ? ((item.valorTotal ?? item.valor) || 0) : 0), 0);
+        const pagado = gastos.reduce((acc, item) => acc + (item.pagado ? ((item.valorTotal ?? item.valor) || 0) : 0), 0) + getTotalGastosHormiga();
         const pctNum = total > 0 ? Math.min(100, Math.max(0, (pagado / total) * 100)) : 0;
         const donutSvg = document.getElementById('donutPaidSvg');
         const singleDataContainer = document.getElementById('singleDataContainer');
